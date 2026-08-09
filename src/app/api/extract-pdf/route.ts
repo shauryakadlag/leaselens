@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,18 +39,45 @@ export async function POST(req: NextRequest) {
     let cleanText = "";
     let pageCount = 1;
 
+    // Robust PDF text extraction via pdfjs-dist (installed with pdf-parse)
     try {
-      const parser = new PDFParse({ data: uint8Array });
-      const textResult = await parser.getText();
-      cleanText = (textResult.text || "").replace(/\r\n/g, "\n").trim();
-      pageCount = textResult.total || textResult.pages?.length || 1;
-      await parser.destroy();
-    } catch (parseErr: unknown) {
-      console.error("PDF parse error:", parseErr);
-      return NextResponse.json(
-        { error: "Failed to read PDF document. The file may be password-protected or corrupted." },
-        { status: 422 }
-      );
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const loadingTask = pdfjsLib.getDocument({
+        data: uint8Array,
+        useSystemFonts: true,
+        disableFontFace: true,
+        verbosity: 0,
+      });
+      const pdfDoc = await loadingTask.promise;
+      pageCount = pdfDoc.numPages;
+
+      let fullText = "";
+      for (let i = 1; i <= pageCount; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStrings = textContent.items
+          .map((item: any) => (item && item.str ? item.str : ""))
+          .filter(Boolean);
+        fullText += pageStrings.join(" ") + "\n\n";
+      }
+
+      cleanText = fullText.replace(/\r\n/g, "\n").trim();
+    } catch (primaryErr: unknown) {
+      console.warn("Primary pdfjs extraction warning, trying secondary fallback:", primaryErr);
+      try {
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({ data: uint8Array });
+        const textResult = await parser.getText();
+        cleanText = (textResult.text || "").replace(/\r\n/g, "\n").trim();
+        pageCount = textResult.total || textResult.pages?.length || 1;
+        await parser.destroy();
+      } catch (secondaryErr: unknown) {
+        console.error("PDF parse error:", secondaryErr);
+        return NextResponse.json(
+          { error: "Failed to read PDF document. The file may be password-protected or corrupted." },
+          { status: 422 }
+        );
+      }
     }
 
     // Check for scanned / image-only PDFs
