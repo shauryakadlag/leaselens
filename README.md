@@ -8,6 +8,22 @@ LeaseLens is an AI-powered residential lease analyzer designed to help tenants u
 
 ---
 
+## 📄 Demo / Test Lease PDF (For Judges & Evaluators)
+
+To test the live deployed LeaseLens app, you can download our pre-packaged sample lease document directly from this repository:
+
+📥 **[Download Test Lease PDF (`use-me-to-test-leaselens.pdf`)](file:///c:/Users/Lenovo/Documents/leaselens/test-data/use-me-to-test-leaselens.pdf)** (Path: `test-data/use-me-to-test-leaselens.pdf` inside this repository)
+
+**What this sample agreement contains for testing:**
+- **Financial Terms**: Base Rent of ₹35,000/month, Security Deposit of ₹2,10,000 (6 months rent), ₹3,500 monthly maintenance fee.
+- **High-Risk Lifestyle Clause**: Strict prohibition on cooking/consuming non-vegetarian food or eggs with a 24-hour eviction penalty.
+- **High-Risk Access Clause**: Short 2-hour verbal notice for landlord property entry.
+- **Financial Penalty Clauses**: 6-month mandatory lock-in period with total deposit forfeiture & mandatory move-out painting deduction of one full month's rent.
+
+Simply download `use-me-to-test-leaselens.pdf` and upload it to LeaseLens to see full page-aware extraction, risk analysis, grounded Q&A, cost calculations, and email generator in action!
+
+---
+
 ## 🌟 Key Features
 
 1. **Page-Aware PDF Text Extraction**:
@@ -52,9 +68,9 @@ LeaseLens is an AI-powered residential lease analyzer designed to help tenants u
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4 + Château Shadows CSS design system
 - **AI Model**: Gemini 2.5 Flash via `@google/genai` (Google Gen AI SDK v2.16.0)
-- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL resolution)
+- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL resolution + W3C DOMMatrix polyfill)
 - **Icons**: `lucide-react`
-- **Deployment**: Vercel & Node.js production compatible
+- **Deployment**: Netlify & Node.js production compatible
 
 ---
 
