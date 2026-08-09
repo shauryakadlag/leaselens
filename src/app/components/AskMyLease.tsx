@@ -24,17 +24,23 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      sender: "ai",
-      text: `Hello! I am your **Ask My Lease** legal document assistant. Ask me any question about your uploaded lease agreement (*${fileName}*). Every answer is strictly extracted from your contract text.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Complete state reset whenever a new lease document is loaded
+  useEffect(() => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: "ai",
+        text: `Hello! I am your **Ask My Lease** legal document assistant. Ask me any question about your uploaded lease agreement (*${fileName}*). Every answer is strictly extracted from your contract text.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setInputQuery("");
+  }, [fileName, leaseText]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

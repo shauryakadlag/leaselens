@@ -15,7 +15,7 @@ Residential lease agreements are long and complex. Tenants frequently miss key f
 ### Product Solution
 An AI-powered residential lease document analyzer. Users upload a lease PDF, and LeaseLens delivers:
 1. Tenant Risk Index
-2. Financial Summary (exact dollar values and grace period terms)
+2. Financial Summary (exact dollar or rupee values and grace period terms)
 3. Total Lease Commitment & Cost Calculator (Move-In Cash + 1-Year Financial Outlay)
 4. Important Dates & Deadlines (exact commencement and expiration dates)
 5. Flagged Risky/Unusual Clauses with Plain-English Explanations, Recommendations, and Verified Page References
@@ -27,7 +27,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 
 ---
 
-## 2. Final Implementation State (All Milestones M0–M7 Complete)
+## 2. Final Implementation State (All Milestones M0–M7 & Lifecycle Fix Complete)
 
 - **Completed**:
   - **M0**: Next.js 16 project foundation, TypeScript, Tailwind CSS v4, Git repository, GitHub connection.
@@ -39,6 +39,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
   - **M5**: Built `LandlordEmailGenerator.tsx` and `TotalCostCalculator.tsx`, fully integrated into `src/app/page.tsx`.
   - **M6**: Completed final responsive UX audit and visual polish across 320px–1440px+ viewports.
   - **M7**: Final submission preparation, README documentation polish, production build verification, presentation demo packaging.
+  - **Lifecycle Bugfix**: Guaranteed complete state replacement upon new document uploads and added native multi-currency support (`₹`, `$`, `€`, `£`, `Rs.`).
   - Verified production build (`npm run build`) compiles 100% cleanly with zero errors.
 
 ---
@@ -56,11 +57,11 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 ### Key Files
 - `src/app/page.tsx` — Main application UI featuring Upload, Page-Aware Extraction, Split-Screen Studio, Dashboard, Cost Calculator, Email Generator & Ask My Lease views.
 - `src/app/components/LandlordEmailGenerator.tsx` — One-Click Landlord Email Generator component with clause selection, copy to clipboard, and mailto links.
-- `src/app/components/TotalCostCalculator.tsx` — Total Lease Cost & Financial Commitment Calculator with interactive toggles.
+- `src/app/components/TotalCostCalculator.tsx` — Total Lease Cost & Financial Commitment Calculator with interactive toggles and multi-currency formatting.
 - `src/app/components/PDFViewer.tsx` — PDF Document Viewer component with page controls and target fragment jumping.
-- `src/app/components/AskMyLease.tsx` — Grounded AI Q&A chat assistant component with suggested question chips.
+- `src/app/components/AskMyLease.tsx` — Grounded AI Q&A chat assistant component with suggested question chips and auto-reset.
 - `src/app/api/extract-pdf/route.ts` — Server route for page-aware PDF text parsing (`--- PAGE X ---`).
-- `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis, factual extraction priority, risk classification, and server-side page verification.
+- `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis, factual extraction priority, risk classification, multi-currency parsing, and server-side page verification.
 - `src/app/api/ask-lease/route.ts` — Server route for grounded Gemini 2.5 Flash Q&A with 3-tier grounding classification.
 - `README.md` — Complete project showcase and setup guide.
 - `PROJECT_STATUS.md` — Active status and milestone tracking.

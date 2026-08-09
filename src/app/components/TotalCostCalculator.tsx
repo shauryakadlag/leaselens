@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, DollarSign, ShieldCheck, HelpCircle, Check, Info } from "lucide-react";
+import { Calculator } from "lucide-react";
 import { LeaseAnalysisResult } from "../api/analyze-lease/route";
 
 interface TotalCostCalculatorProps {
@@ -14,33 +14,58 @@ export default function TotalCostCalculator({
   const [includePetFees, setIncludePetFees] = useState(false);
   const [includeInsurance, setIncludeInsurance] = useState(true);
 
-  // Parse numerical dollars from extracted financial text strings
+  // Detect active currency symbol from financial summary text
+  const detectCurrency = (str1: string, str2: string): string => {
+    const combined = `${str1 || ""} ${str2 || ""}`;
+    if (combined.includes("₹") || combined.toLowerCase().includes("inr") || combined.toLowerCase().includes("rs")) {
+      return "₹";
+    }
+    if (combined.includes("€") || combined.toLowerCase().includes("eur")) {
+      return "€";
+    }
+    if (combined.includes("£") || combined.toLowerCase().includes("gbp")) {
+      return "£";
+    }
+    return "$";
+  };
+
+  const currencySymbol = detectCurrency(
+    financialSummary.monthlyRent,
+    financialSummary.securityDeposit
+  );
+
+  // Parse numerical amounts cleanly from multi-currency strings (e.g. ₹35,000, ₹2,10,000, $1,500.00, Rs 35000)
   const parseAmount = (str: string, fallback: number): number => {
     if (!str) return fallback;
-    const match = str.match(/\$([0-9,]+(?:\.[0-9]{2})?)/);
-    if (match) {
-      return parseFloat(match[1].replace(/,/g, ""));
+    const match = str.match(/(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i);
+    if (match && match[1]) {
+      const numStr = match[1].replace(/,/g, "");
+      const val = parseFloat(numStr);
+      if (!isNaN(val) && val > 0) return val;
     }
     return fallback;
   };
 
-  const monthlyRentNum = parseAmount(financialSummary.monthlyRent, 1500);
-  const securityDepositNum = parseAmount(financialSummary.securityDeposit, 2000);
+  const defaultRentFallback = currencySymbol === "₹" ? 35000 : 1500;
+  const defaultDepositFallback = currencySymbol === "₹" ? 210000 : 2000;
 
-  // Parse admin / move-in fee from additional fees array
-  let moveInAdminFeeNum = 150;
-  let trashFeeMonthlyNum = 25;
-  let petDepositNum = 300;
-  let petRentMonthlyNum = 35;
-  const insuranceMonthlyNum = 15;
+  const monthlyRentNum = parseAmount(financialSummary.monthlyRent, defaultRentFallback);
+  const securityDepositNum = parseAmount(financialSummary.securityDeposit, defaultDepositFallback);
+
+  // Parse admin / move-in fee / utility / pet fees
+  let moveInAdminFeeNum = currencySymbol === "₹" ? 3500 : 150;
+  let trashFeeMonthlyNum = currencySymbol === "₹" ? 500 : 25;
+  let petDepositNum = currencySymbol === "₹" ? 5000 : 300;
+  let petRentMonthlyNum = currencySymbol === "₹" ? 1000 : 35;
+  const insuranceMonthlyNum = currencySymbol === "₹" ? 300 : 15;
 
   if (financialSummary.additionalFees && Array.isArray(financialSummary.additionalFees)) {
     financialSummary.additionalFees.forEach((fee) => {
       const lower = fee.toLowerCase();
-      if (lower.includes("move-in") || lower.includes("admin")) {
+      if (lower.includes("move-in") || lower.includes("admin") || lower.includes("painting")) {
         moveInAdminFeeNum = parseAmount(fee, moveInAdminFeeNum);
       }
-      if (lower.includes("trash")) {
+      if (lower.includes("trash") || lower.includes("maintenance")) {
         trashFeeMonthlyNum = parseAmount(fee, trashFeeMonthlyNum);
       }
       if (lower.includes("pet deposit")) {
@@ -76,6 +101,22 @@ export default function TotalCostCalculator({
     (totalFirstYearCommitment - securityDepositNum) / 12
   );
 
+  const formatCurrency = (val: number): string => {
+    const formatted =
+      currencySymbol === "₹"
+        ? val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${currencySymbol}${formatted}`;
+  };
+
+  const formatCompact = (val: number): string => {
+    const formatted =
+      currencySymbol === "₹"
+        ? val.toLocaleString("en-IN")
+        : val.toLocaleString("en-US");
+    return `${currencySymbol}${formatted}`;
+  };
+
   return (
     <div className="bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-5">
       {/* Header */}
@@ -104,7 +145,7 @@ export default function TotalCostCalculator({
             onChange={(e) => setIncludePetFees(e.target.checked)}
             className="accent-[#5D0D18] rounded"
           />
-          <span>Include Pet Fees ($300 deposit + $35/mo)</span>
+          <span>Include Pet Fees ({formatCompact(petDepositNum)} deposit + {formatCompact(petRentMonthlyNum)}/mo)</span>
         </label>
 
         <label className="flex items-center gap-2 cursor-pointer select-none bg-[#FAF4E6] px-3 py-1.5 rounded-lg border border-[#EADFCF] text-[#1E1517]">
@@ -114,7 +155,7 @@ export default function TotalCostCalculator({
             onChange={(e) => setIncludeInsurance(e.target.checked)}
             className="accent-[#5D0D18] rounded"
           />
-          <span>Include Renter&apos;s Insurance ($15/mo est.)</span>
+          <span>Include Insurance Estimate ({formatCompact(insuranceMonthlyNum)}/mo)</span>
         </label>
       </div>
 
@@ -126,25 +167,25 @@ export default function TotalCostCalculator({
             Move-In Cash Required
           </span>
           <span className="text-2xl sm:text-3xl font-serif font-bold text-[#5D0D18] block">
-            ${moveInCashTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatCurrency(moveInCashTotal)}
           </span>
           <div className="text-[11px] text-[#544B4C] pt-2 border-t border-[#EADFCF]/80 space-y-1">
             <div className="flex justify-between">
               <span>First Month Rent:</span>
-              <span className="font-semibold text-[#1E1517]">${monthlyRentNum.toLocaleString()}</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(monthlyRentNum)}</span>
             </div>
             <div className="flex justify-between">
               <span>Security Deposit:</span>
-              <span className="font-semibold text-[#1E1517]">${securityDepositNum.toLocaleString()}</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(securityDepositNum)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Move-In / Admin Fee:</span>
-              <span className="font-semibold text-[#1E1517]">${moveInAdminFeeNum.toLocaleString()}</span>
+              <span>Move-In / Admin / Prep:</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(moveInAdminFeeNum)}</span>
             </div>
             {includePetFees && (
               <div className="flex justify-between text-[#5D0D18]">
                 <span>Pet Deposit:</span>
-                <span className="font-semibold">${petDepositNum.toLocaleString()}</span>
+                <span className="font-semibold">{formatCompact(petDepositNum)}</span>
               </div>
             )}
           </div>
@@ -156,25 +197,25 @@ export default function TotalCostCalculator({
             Total 1-Year Financial Outlay
           </span>
           <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1E1517] block">
-            ${totalFirstYearCommitment.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatCurrency(totalFirstYearCommitment)}
           </span>
           <div className="text-[11px] text-[#544B4C] pt-2 border-t border-[#C3D2CD]/80 space-y-1">
             <div className="flex justify-between">
               <span>12 Months Base Rent:</span>
-              <span className="font-semibold text-[#1E1517]">${annualBaseRent.toLocaleString()}</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(annualBaseRent)}</span>
             </div>
             <div className="flex justify-between">
               <span>Security Deposit (Refundable):</span>
-              <span className="font-semibold text-[#1E1517]">${securityDepositNum.toLocaleString()}</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(securityDepositNum)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Trash / Service Fees (12 mo):</span>
-              <span className="font-semibold text-[#1E1517]">${annualTrashFees.toLocaleString()}</span>
+              <span>Maintenance / Fees (12 mo):</span>
+              <span className="font-semibold text-[#1E1517]">{formatCompact(annualTrashFees)}</span>
             </div>
             {includeInsurance && (
               <div className="flex justify-between">
                 <span>Renter&apos;s Insurance (12 mo):</span>
-                <span className="font-semibold text-[#1E1517]">${annualInsurance.toLocaleString()}</span>
+                <span className="font-semibold text-[#1E1517]">{formatCompact(annualInsurance)}</span>
               </div>
             )}
           </div>
@@ -184,10 +225,10 @@ export default function TotalCostCalculator({
       {/* Effective Net Monthly Outlay Banner */}
       <div className="bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF] flex items-center justify-between text-xs">
         <span className="text-[#544B4C] font-medium">
-          Effective Net Monthly Outlay (Rent + Fees - Refundable Deposit):
+          Effective Net Monthly Outlay (Rent + Fees - Deposit):
         </span>
         <span className="font-serif font-bold text-[#1E1517] text-sm">
-          ~${averageMonthlyEffectiveCost.toLocaleString()}/month
+          ~{formatCompact(averageMonthlyEffectiveCost)}/month
         </span>
       </div>
     </div>

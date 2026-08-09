@@ -778,7 +778,7 @@ export default function Home() {
                     mobileTab === "chat" || mobileTab === "dashboard" ? "block" : "hidden lg:block"
                   }`}
                 >
-                  <AskMyLease leaseText={extractedData.text} fileName={extractedData.fileName} />
+                  <AskMyLease key={extractedData.fileName} leaseText={extractedData.text} fileName={extractedData.fileName} />
                 </div>
               </div>
             </div>

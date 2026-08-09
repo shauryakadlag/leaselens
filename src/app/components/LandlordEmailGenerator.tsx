@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Copy, Check, ExternalLink, Send, Sparkles, AlertCircle, CheckSquare, Square } from "lucide-react";
 import { FlaggedClause } from "../api/analyze-lease/route";
 
@@ -18,6 +18,12 @@ export default function LandlordEmailGenerator({
   );
   const [copied, setCopied] = useState(false);
   const [landlordName, setLandlordName] = useState("Property Manager / Landlord");
+
+  // Reset selected clause IDs whenever a new document or set of clauses is loaded
+  useEffect(() => {
+    setSelectedClauseIds(flaggedClauses.map((c) => c.id));
+    setCopied(false);
+  }, [flaggedClauses, fileName]);
 
   const toggleClause = (id: string) => {
     setSelectedClauseIds((prev) =>

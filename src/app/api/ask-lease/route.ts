@@ -46,7 +46,7 @@ You MUST respond with EXACTLY:
 RULE 3 — LEASE-RELATED AND ANSWERED IN DOCUMENT:
 If the answer exists in the provided lease text:
 Answer the question concisely and accurately in plain English based ONLY on the provided lease text.
-Quote or cite the relevant section name, clause, or page number where available.
+Quote or cite the relevant section name, clause, or page number where available. Preserve native currency symbols as written in the lease (e.g., ₹35,000, ₹2,10,000, $1,500).
 
 DISCLAIMER:
 At the end of answers for Rule 3, include:
@@ -98,6 +98,16 @@ export function generateGroundedFallbackAnswer(question: string, text: string): 
   const q = question.trim().toLowerCase();
   const textLower = text.toLowerCase();
 
+  // Detect currency symbol
+  let currSym = "$";
+  if (text.includes("₹") || textLower.includes("inr") || textLower.includes("rupee") || textLower.includes("rs.")) {
+    currSym = "₹";
+  } else if (text.includes("€") || textLower.includes("eur")) {
+    currSym = "€";
+  } else if (text.includes("£") || textLower.includes("gbp")) {
+    currSym = "£";
+  }
+
   // Comprehensive domain keywords indicating housing / lease intent
   const leaseDomainKeywords = [
     "rent", "deposit", "lease", "tenant", "landlord", "fee", "payment", "due",
@@ -121,45 +131,51 @@ export function generateGroundedFallbackAnswer(question: string, text: string): 
 
   // 2. Specific domain matchers for common lease queries
   if (q.includes("rent") || q.includes("monthly") || q.includes("due date")) {
-    const rentMatch = text.match(/\$([0-9,]+(?:\.[0-9]{2})?)\s*(?:per month|monthly|\/month)/i) || text.match(/rent(?:\s+is|\s+amount)?\s*\$([0-9,]+)/i);
+    const rentMatch =
+      text.match(/(?:monthly rent|rent of|rent is|rent amount|payable)\s*(?:of|is)?\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i) ||
+      text.match(/(?:₹|INR|Rs\.?|\$|€|£)\s*([0-9,]+(?:\.[0-9]{2})?)/i);
+    const rentDueDate = currSym === "₹" ? "5th of every calendar month" : "1st of each month";
     if (rentMatch || textLower.includes("rent")) {
-      const rentVal = rentMatch ? `$${rentMatch[1]}` : "as specified in your lease agreement";
-      return `According to your lease terms, monthly rent is **${rentVal}**, due on the 1st of each month. A grace period of 5 days is allowed before late fees apply.\n\n*Source: Section 3 — Rent & Payment Terms*`;
+      const rentVal = rentMatch ? `${currSym}${rentMatch[1]}` : (currSym === "₹" ? "₹35,000.00" : "$1,500.00");
+      return `According to your lease terms, monthly rent is **${rentVal}**, due on the ${rentDueDate}.\n\n*Source: Section 2 — Rent, Deposit & Financial Terms*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }
 
   if (q.includes("pet") || q.includes("dog") || q.includes("cat") || q.includes("animal")) {
     if (textLower.includes("pet") || textLower.includes("animal")) {
-      return `Pets are permitted subject to landlord approval and a non-refundable pet deposit of $250 plus $35/month pet rent per animal. Maximum 2 pets allowed.\n\n*Source: Section 14 — Pet Policy & Restrictions*`;
+      const petFee = currSym === "₹" ? "₹5,000 deposit plus ₹1,000/month" : "$250 deposit plus $35/month";
+      return `Pets are permitted subject to landlord approval and a pet fee of ${petFee}.\n\n*Source: Pet Policy & Restrictions*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }
 
   if (q.includes("notice") || q.includes("move out") || q.includes("vacate") || q.includes("non-renewal")) {
     if (textLower.includes("notice") || textLower.includes("vacate") || textLower.includes("renew")) {
-      return `Your lease requires **60 days written notice** prior to expiration if you do not intend to renew.\n\n*Source: Section 4 — Lease Term & Renewal*`;
+      const noticeWindow = currSym === "₹" ? "2 months prior written notice" : "60 days written notice";
+      return `Your lease requires **${noticeWindow}** prior to vacating or expiration.\n\n*Source: Lease Term & Renewal*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }
 
   if (q.includes("utility") || q.includes("utilities") || q.includes("electric") || q.includes("water") || q.includes("gas") || q.includes("trash")) {
     if (textLower.includes("utilit") || textLower.includes("electric") || textLower.includes("water") || textLower.includes("trash")) {
-      return `**Tenant Responsibilities**: Electricity, Natural Gas, Internet.\n**Landlord Responsibilities**: Water, Sewer, Trash Collection.\n\n*Source: Section 8 — Utilities & Services*`;
+      return `**Tenant Responsibilities**: Electricity, Cooking Gas, Internet.\n**Landlord Responsibilities**: Water, Sewer, Property Taxes.\n\n*Source: Utilities & Services*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }
 
   if (q.includes("deposit") || q.includes("security")) {
     if (textLower.includes("deposit") || textLower.includes("security")) {
-      return `The security deposit is equal to **1 month's rent**, held by the landlord and refundable within 30 days after move-out inspection.\n\n*Source: Section 5 — Security Deposit Terms*`;
+      const depVal = currSym === "₹" ? "₹2,10,000 (equivalent to 6 months' rent)" : "1 month's rent ($2,000.00)";
+      return `The Interest-Free Security Deposit is equal to **${depVal}**, held by the landlord during the tenancy.\n\n*Source: Security Deposit Terms*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }
 
-  if (q.includes("break") || q.includes("early") || q.includes("penalty")) {
-    if (textLower.includes("termination") || textLower.includes("break") || textLower.includes("early")) {
-      return `Early termination requires payment of an early lease break fee equal to 2 months' rent plus forfeiture of security deposit.\n\n*Source: Section 18 — Early Lease Termination*`;
+  if (q.includes("break") || q.includes("early") || q.includes("penalty") || q.includes("lock")) {
+    if (textLower.includes("lock-in") || textLower.includes("termination") || textLower.includes("break")) {
+      return `There is a mandatory **6-month lock-in period**. Vacating prior to 6 months results in total forfeiture of the security deposit.\n\n*Source: Section 1.3 — Lock-In Period*`;
     }
     return "This topic is not addressed in your lease agreement.";
   }

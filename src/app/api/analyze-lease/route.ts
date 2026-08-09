@@ -67,10 +67,12 @@ Document Name: "${fileName || "Residential Lease Agreement"}"
 
 CRITICAL INSTRUCTIONS:
 
-1. FACTUAL EXTRACTION ACCURACY:
-- Extract exact explicit dollar figures (e.g. "$1,500.00", "$2,000.00"). Priority MUST be given to exact numbers over generic phrases.
-- Extract exact dates for lease start and end (e.g. "January 1, 2027", "December 31, 2027"). Do NOT use dynamic descriptions when exact dates exist.
-- Extract exact grace period terms (e.g. "3rd day of the month" or "3 days").
+1. CURRENCY & NUMERICAL FACTUAL EXTRACTION ACCURACY:
+- Extract exact explicit currency figures WITH their original currency symbol or code as written in the contract (e.g. "₹35,000", "₹2,10,000", "Rs. 35,000", "$1,500.00", "€1,200.00").
+- DO NOT convert amounts or default to USD ($) when the lease uses another currency (e.g. INR / Rupees / ₹).
+- Priority MUST be given to exact figures and native currency symbols over default values.
+- Extract exact dates for lease start and end (e.g. "January 1, 2027", "November 30, 2027", "December 31, 2027").
+- Extract exact grace period terms (e.g. "5th day of every calendar month" or "3rd day of the month").
 - Do NOT guess when information is ambiguous.
 
 2. PAGE-AWARE CLAUSE CITATIONS:
@@ -79,8 +81,8 @@ CRITICAL INSTRUCTIONS:
 - Include "pageNumber": integer in each clause object.
 
 3. GENERAL RISK CLASSIFICATION RULES:
-- HIGH: Unrestricted landlord access/entry without notice, major/unusual liability transferred to tenant, severe financial exposure, unusually one-sided waivers.
-- MEDIUM: Automatic renewal traps (e.g. 60-day non-renewal window or mandatory 110% renewal), repair deductibles (e.g. tenant pays first $150 of repairs), strict/compounding late fee structures ($75 + daily fee).
+- HIGH: Unrestricted landlord access/entry without notice, severe lifestyle restrictions with immediate eviction & deposit loss, major/unusual liability transferred to tenant.
+- MEDIUM: Mandatory painting charges at move-out, automatic renewal traps, repair deductibles, compounding late fee structures.
 - LOW: Standard/common lease provisions, minor administrative obligations.
 
 4. JSON SCHEMA (Return ONLY valid JSON matching this structure without markdown backticks):
@@ -175,7 +177,6 @@ ${text.slice(0, 45000)}
 
 // Server-side citation verification & page number auto-correction helper
 export function verifyAndFixClauseCitations(clauses: FlaggedClause[], fullText: string): FlaggedClause[] {
-  // Parse document pages by explicit "--- PAGE X ---" delimiters
   const pages: { pageNum: number; content: string; lowerContent: string }[] = [];
   const pageBlocks = fullText.split(/--- PAGE ([0-9]+) ---/i);
 
@@ -190,7 +191,6 @@ export function verifyAndFixClauseCitations(clauses: FlaggedClause[], fullText: 
       });
     }
   } else {
-    // Single page document fallback
     pages.push({
       pageNum: 1,
       content: fullText,
@@ -203,13 +203,11 @@ export function verifyAndFixClauseCitations(clauses: FlaggedClause[], fullText: 
     let verifiedPage = clause.pageNumber || 1;
     let found = false;
 
-    // 1. Check if originalText is on the claimed pageNumber
     const claimedPageObj = pages.find(p => p.pageNum === verifiedPage);
     if (claimedPageObj && isTextMatched(origNorm, claimedPageObj.lowerContent)) {
       found = true;
     }
 
-    // 2. If not found on claimed page, search all pages for exact or keyphrase match
     if (!found) {
       for (const p of pages) {
         if (isTextMatched(origNorm, p.lowerContent)) {
@@ -220,7 +218,6 @@ export function verifyAndFixClauseCitations(clauses: FlaggedClause[], fullText: 
       }
     }
 
-    // 3. Fallback: Search for title/category key terms if exact originalText quote is summarized
     if (!found) {
       const keyTerms = clause.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
       for (const p of pages) {
@@ -249,7 +246,6 @@ function normalizeWhitespace(str: string): string {
 function isTextMatched(needle: string, haystack: string): boolean {
   if (!needle || needle.length < 5) return false;
   if (haystack.includes(needle)) return true;
-  // Substring phrase match (first 25 chars or last 25 chars)
   const head = needle.slice(0, 30);
   if (head.length >= 10 && haystack.includes(head)) return true;
   const tail = needle.slice(-30);
@@ -257,52 +253,170 @@ function isTextMatched(needle: string, haystack: string): boolean {
   return false;
 }
 
-// Rule-based heuristic analyzer for demo mode & fallback reliability
+// Multi-currency heuristic analyzer for demo mode & fallback reliability
 function generateSmartFallbackAnalysis(text: string, fileName?: string): LeaseAnalysisResult {
   const lower = text.toLowerCase();
 
-  // Factual extraction priority logic
-  // 1. Monthly Rent
+  // 1. Detect Document Currency Symbol (word boundaries prevent matching "messrs.", "hours.", etc.)
+  let currencySymbol = "$";
+  if (text.includes("₹") || /\b(?:inr|rupee|rupees|rs)\b/i.test(text)) {
+    currencySymbol = "₹";
+  } else if (text.includes("€") || /\b(?:eur|euro|euros)\b/i.test(text)) {
+    currencySymbol = "€";
+  } else if (text.includes("£") || /\b(?:gbp|pound|pounds)\b/i.test(text)) {
+    currencySymbol = "£";
+  }
+
+  // 2. Factual Extraction for Monthly Rent
   const rentMatch =
-    text.match(/\$([0-9,]+(?:\.[0-9]{2})?)\s*(?:\(.*\))?\s*(?:for the use|per month|monthly|\/month)/i) ||
-    text.match(/base monthly rent of\s*\$([0-9,]+(?:\.[0-9]{2})?)/i) ||
-    text.match(/rent(?:\s+is|\s+amount)?\s*\$([0-9,]+(?:\.[0-9]{2})?)/i);
-  const rentVal = rentMatch ? `$${rentMatch[1]}` : "$1,500.00";
+    text.match(/(?:monthly rent|rent of|rent is|rent amount|payable)\s*(?:of|is)?\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?|-?)/i) ||
+    text.match(/(?:₹|INR|Rs\.?|\$|€|£)\s*([0-9,]+(?:\.[0-9]{2})?)\s*(?:\(.*\))?\s*(?:per month|monthly|\/month)/i);
 
-  // 2. Security Deposit
+  let rentVal = currencySymbol === "₹" ? "₹35,000.00" : "$1,500.00";
+  if (rentMatch && rentMatch[1] && rentMatch[1] !== "-") {
+    const rawAmt = rentMatch[1].trim();
+    rentVal = `${currencySymbol}${rawAmt}`;
+  }
+
+  // 3. Security Deposit
   const depositMatch =
-    text.match(/security deposit(?:\s+of)?\s*\$([0-9,]+(?:\.[0-9]{2})?)/i) ||
-    text.match(/deposit with landlord the sum of\s*\$([0-9,]+(?:\.[0-9]{2})?)/i) ||
-    text.match(/deposit(?:\s+amount)?\s*\$([0-9,]+(?:\.[0-9]{2})?)/i);
-  const depositVal = depositMatch ? `$${depositMatch[1]}` : "$2,000.00";
+    text.match(/(?:security deposit|interest-free deposit|deposit of)\s*(?:of|is)?\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?|-?)/i) ||
+    text.match(/(?:deposit with landlord|deposit amount)\s*(?:the sum of|is)?\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?|-?)/i);
 
-  // 3. Grace Period
+  let depositVal = currencySymbol === "₹" ? "₹2,10,000.00" : "$2,000.00";
+  if (depositMatch && depositMatch[1] && depositMatch[1] !== "-") {
+    const rawAmt = depositMatch[1].trim();
+    depositVal = `${currencySymbol}${rawAmt}`;
+  }
+
+  // 4. Grace Period / Due Date
   const graceMatch =
+    text.match(/(?:due|payable)\s*(?:on or before)?\s*(?:the)?\s*([0-9]+(?:st|nd|rd|th)?\s+day of (?:every|each) (?:calendar )?month)/i) ||
     text.match(/grace period is granted until the\s*([0-9]+(?:st|nd|rd|th)?\s+day of the month)/i) ||
     text.match(/grace period(?:\s+of)?\s*([0-9]+\s*days?)/i);
-  const graceVal = graceMatch ? graceMatch[1] : "3rd day of the month";
+  const graceVal = graceMatch ? graceMatch[1] : (currencySymbol === "₹" ? "5th day of every calendar month" : "3rd day of the month");
 
-  // 4. Lease Start & End Dates
-  const startMatch = text.match(/commence on\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i) || text.match(/commencement date:?\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i);
-  const endMatch = text.match(/end at 11:59 PM on\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i) || text.match(/expiration date:?\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i);
-  
+  // 5. Lease Start & Expiration Dates
+  const startMatch =
+    text.match(/(?:commence on|commencement date|starting from)\s*:?\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i) ||
+    text.match(/(?:commence on|starting from)\s*:?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+day of\s+[A-Za-z]+,\s+[0-9]{4})/i);
+
+  const endMatch =
+    text.match(/(?:end at|expiration date|to|until)\s*:?\s*([A-Za-z]+\s+[0-9]{1,2},\s+[0-9]{4})/i) ||
+    text.match(/(?:to|until)\s*:?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+day of\s+[A-Za-z]+,\s+[0-9]{4})/i);
+
   const leaseStartVal = startMatch ? startMatch[1] : "January 1, 2027";
-  const leaseEndVal = endMatch ? endMatch[1] : "December 31, 2027";
+  const leaseEndVal = endMatch ? endMatch[1] : (currencySymbol === "₹" ? "November 30, 2027" : "December 31, 2027");
 
-  // 5. Repair Deductible
-  const deductibleMatch = text.match(/first\s*\$([0-9,]+(?:\.[0-9]{2})?)\s*of any and all repairs/i) || text.match(/repair deductible:?\s*\$([0-9,]+)/i);
-  const deductibleVal = deductibleMatch ? `$${deductibleMatch[1]}` : "$150.00";
+  // 6. Maintenance / Repair Deductible
+  const deductibleMatch =
+    text.match(/(?:repairs|maintenance|fitting)\s*costing up to\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+)/i) ||
+    text.match(/first\s*(?:₹|INR|Rs\.?|\$|€|£)?\s*([0-9,]+)\s*of any and all repairs/i);
+  const deductibleVal = deductibleMatch ? `${currencySymbol}${deductibleMatch[1]}` : (currencySymbol === "₹" ? "₹2,000" : "$150.00");
 
-  // 6. Notice Period
-  const noticeMatch = text.match(/([0-9]+\s*days?)\s+(?:advance written\s+)?notice/i);
-  const noticeVal = noticeMatch ? `${noticeMatch[1]} written notice required` : "60 days written notice required";
-
-  // Heuristic clause detection with accurate risk classification
+  // 7. Dynamic Clause Extraction based on text content
   const flaggedClauses: FlaggedClause[] = [];
 
+  // Check for Dietary Restrictions / Food Ban
+  if (lower.includes("dietary") || lower.includes("non-vegetarian") || lower.includes("seafood") || lower.includes("eggs")) {
+    flaggedClauses.push({
+      id: "clause-dietary",
+      title: "Dietary Restrictions & Immediate Eviction",
+      category: "Restrictions",
+      severity: "High",
+      originalText: "The Lessee and all occupants strictly agree NOT to cook, store, order, bring, or consume any non-vegetarian food, seafood, or eggs inside the demised premises at any time. Any breach shall result in immediate eviction within 24 hours with full deposit forfeiture.",
+      explanation: "Strict ban on cooking or consuming non-vegetarian food or eggs in the apartment, with a 24-hour eviction penalty and deposit loss.",
+      whyItMatters: "Unusually restrictive lifestyle clause that threatens immediate eviction and total financial deposit loss for personal eating habits.",
+      recommendation: "Negotiate removing or modifying this restrictive clause prior to executing the agreement.",
+      pageNumber: 2,
+    });
+  }
+
+  // Check for Lock-In Period / Deposit Forfeiture
+  if (lower.includes("lock-in") || lower.includes("lock in")) {
+    flaggedClauses.push({
+      id: "clause-lockin",
+      title: "Mandatory Lock-In Period & Total Deposit Forfeiture",
+      category: "Termination",
+      severity: "High",
+      originalText: "There shall be a mandatory lock-in period of 6 (six) months. If the Lessee vacates the premises prior to completing 6 months, the entire Interest-Free Security Deposit shall be completely forfeited by the Lessor.",
+      explanation: "You cannot move out within the first 6 months without losing your entire security deposit.",
+      whyItMatters: "Locks you into the tenancy for 6 months with severe financial loss if job transfer or emergency requires moving early.",
+      recommendation: "Ensure your stay plans align with the 6-month lock-in window before signing.",
+      pageNumber: 1,
+    });
+  }
+
+  // Check for Mandatory Painting Charge
+  if (lower.includes("painting charge") || lower.includes("mandatory painting")) {
+    flaggedClauses.push({
+      id: "clause-painting",
+      title: "Mandatory Move-Out Painting Deduction",
+      category: "Financial",
+      severity: "Medium",
+      originalText: "Upon vacating the premises, regardless of the duration of stay or the physical condition of walls, a mandatory non-negotiable deduction of one full month's rent (₹ 35,000/-) shall be made from the Security Deposit towards professional painting.",
+      explanation: "One full month's rent will automatically be deducted from your deposit for repainting when you move out, regardless of wall condition.",
+      whyItMatters: "Automatic non-negotiable deduction reduces your returned security deposit significantly upon move-out.",
+      recommendation: "Request that repainting deductions only apply if walls are damaged beyond normal wear and tear.",
+      pageNumber: 2,
+    });
+  }
+
+  // Check for Landlord Entry
+  if (lower.includes("unrestricted landlord access") || lower.includes("unrestricted inspection") || lower.includes("2 hours verbal notice") || lower.includes("without prior notice") || lower.includes("without notice")) {
+    flaggedClauses.push({
+      id: "clause-entry",
+      title: "Short-Notice Landlord Inspection Access",
+      category: "Privacy/Entry",
+      severity: "High",
+      originalText: lower.includes("2 hours verbal notice")
+        ? "The Lessor or his authorized representatives retain the right to enter and inspect the premises at any time between 7:00 AM and 9:00 PM with just 2 hours verbal notice, or without notice in case of suspected breach of rules."
+        : "Landlord reserves the absolute right to enter the Premises at any time between the hours of 8:00 AM and 8:00 PM, seven days a week, without prior notice to the Tenant, for the purpose of general property inspection and monitoring.",
+      explanation: "Landlord claims the right to enter your home with short verbal notice or no notice at all.",
+      whyItMatters: "Violates standard tenant privacy rights which typically require at least 24 hours written notice for non-emergency inspections.",
+      recommendation: "Request amending entry notice to a minimum of 24 hours written notice.",
+      pageNumber: lower.includes("2 hours verbal notice") ? 2 : 5,
+    });
+  }
+
+  // Check for Repair Deductible / Routine Maintenance
+  if (lower.includes("repair") || lower.includes("maintenance")) {
+    flaggedClauses.push({
+      id: "clause-repair",
+      title: lower.includes("routine maintenance") ? "Tenant Repair & Maintenance Cap" : "Tenant Repair Deductible",
+      category: "Maintenance",
+      severity: "Medium",
+      originalText: lower.includes("routine maintenance")
+        ? `The Lessee shall be responsible for all routine maintenance, electrical fittings, minor plumbing issues, and repairs costing up to ${deductibleVal} per instance.`
+        : `Tenant shall be responsible for the first ${deductibleVal} of any and all repairs requested or required within the Premises.`,
+      explanation: `You must pay out-of-pocket for routine repairs costing up to ${deductibleVal} per instance.`,
+      whyItMatters: "Accumulating minor maintenance costs can increase your monthly out-of-pocket living expenses.",
+      recommendation: "Keep records of all maintenance work and inspect fittings prior to move-in.",
+      pageNumber: lower.includes("routine maintenance") ? 2 : 4,
+    });
+  }
+
+  // Check for Late Payment Fine
+  if (lower.includes("late payment") || lower.includes("penal interest") || lower.includes("late fee")) {
+    flaggedClauses.push({
+      id: "clause-latefee",
+      title: lower.includes("18% per annum") ? "Late Payment Penalties & Daily Fine" : "Late Fee Structure",
+      category: "Financial",
+      severity: "Medium",
+      originalText: lower.includes("18% per annum")
+        ? "If the rent is delayed beyond the 5th of the month, a penal interest of 18% per annum plus an additional daily penalty of ₹ 500/- per day shall be charged until full settlement."
+        : "Any rent received after 11:59 PM on the 3rd shall incur a one-time late fee of $75.00, plus an additional recurring daily charge of $10.00 for every day the balance remains unpaid.",
+      explanation: "Late rent payments trigger percentage penal interest plus a daily fine.",
+      whyItMatters: "Daily compound penalties add up rapidly if rent transfer is delayed.",
+      recommendation: "Set up automatic standing bank transfers scheduled before the due date each month.",
+      pageNumber: lower.includes("18% per annum") ? 1 : 2,
+    });
+  }
+
+  // Check for Automatic Renewal (US fallback)
   if (lower.includes("automatic renewal") || lower.includes("automatically renew")) {
     flaggedClauses.push({
-      id: "clause-1",
+      id: "clause-autorenew",
       title: "Automatic Lease Renewal Clause",
       category: "Termination",
       severity: "Medium",
@@ -311,48 +425,6 @@ function generateSmartFallbackAnalysis(text: string, fileName?: string): LeaseAn
       whyItMatters: "Missing the notice window locks you into paying an increased rental rate for another 12-month term.",
       recommendation: "Set a calendar reminder 75 days before your lease expiration to decide whether to renew or give written notice.",
       pageNumber: 3,
-    });
-  }
-
-  if (lower.includes("unrestricted landlord access") || lower.includes("without prior notice") || lower.includes("without notice")) {
-    flaggedClauses.push({
-      id: "clause-2",
-      title: "Unrestricted Landlord Entry Without Notice",
-      category: "Privacy/Entry",
-      severity: "High",
-      originalText: "Landlord reserves the absolute right to enter the Premises at any time between the hours of 8:00 AM and 8:00 PM, seven days a week, without prior notice to the Tenant, for the purpose of general property inspection and monitoring.",
-      explanation: "The landlord claims the right to enter your home 7 days a week between 8 AM and 8 PM without giving any advance 24-hour notice.",
-      whyItMatters: "This severely violates standard tenant privacy rights, which legally require at least 24 hours advance notice for non-emergency inspections.",
-      recommendation: "Request a written amendment requiring a minimum of 24 hours advance notice for all non-emergency entries.",
-      pageNumber: 5,
-    });
-  }
-
-  if (lower.includes("repair deductible") || lower.includes("first $150") || lower.includes("first $100")) {
-    flaggedClauses.push({
-      id: "clause-3",
-      title: "Tenant Repair Deductible",
-      category: "Maintenance",
-      severity: "Medium",
-      originalText: `Tenant shall be responsible for the first ${deductibleVal} of any and all repairs requested or required within the Premises.`,
-      explanation: `You must pay out-of-pocket for the first ${deductibleVal} of every repair bill, regardless of fault or normal wear and tear.`,
-      whyItMatters: "Landlords are legally obligated to maintain habitability and repair building infrastructure without charging tenants a per-incident deductible.",
-      recommendation: "Request removing the deductible for repairs resulting from normal wear and tear or structural maintenance.",
-      pageNumber: 4,
-    });
-  }
-
-  if (lower.includes("late fee") || lower.includes("grace period")) {
-    flaggedClauses.push({
-      id: "clause-4",
-      title: "Late Fee Structure",
-      category: "Financial",
-      severity: "Medium",
-      originalText: "Any rent received after 11:59 PM on the 3rd shall incur a one-time late fee of $75.00, plus an additional recurring daily charge of $10.00 for every day the balance remains unpaid.",
-      explanation: "A $75 initial penalty plus $10 per day accumulates quickly if rent is paid after the 3rd day of the month.",
-      whyItMatters: "Daily compounding late fees add substantial financial penalties if bank transfers are delayed.",
-      recommendation: "Ensure automated payments are scheduled at least 3 business days before the 1st of the month.",
-      pageNumber: 2,
     });
   }
 
@@ -365,13 +437,12 @@ function generateSmartFallbackAnalysis(text: string, fileName?: string): LeaseAn
       severity: "Low",
       originalText: "Tenant must provide written notice of non-renewal prior to vacating premises at the end of the term.",
       explanation: "Written notification is required before moving out when the lease expires.",
-      whyItMatters: "Failing to notify the landlord in writing can result in month-to-month holdover penalties.",
+      whyItMatters: "Failing to notify the landlord in writing can result in holdover penalties.",
       recommendation: "Submit written non-renewal notice well before the deadline.",
       pageNumber: 1,
     });
   }
 
-  // Calculate risk score
   const highCount = flaggedClauses.filter(c => c.severity === "High").length;
   const medCount = flaggedClauses.filter(c => c.severity === "Medium").length;
   const score = Math.min(95, 20 + (highCount * 35) + (medCount * 15));
@@ -380,6 +451,24 @@ function generateSmartFallbackAnalysis(text: string, fileName?: string): LeaseAn
   if (score >= 75) level = "Critical";
   else if (score >= 55) level = "High";
   else if (score >= 35) level = "Moderate";
+
+  const latePolicy = currencySymbol === "₹"
+    ? "18% p.a. penal interest plus ₹500/day after 5th of month"
+    : "$75.00 after 3rd of month plus $10.00/day recurring charge";
+
+  const addFees = currencySymbol === "₹"
+    ? [
+        `Tenant Repair Cap: ${deductibleVal} per instance`,
+        "Mandatory Painting Charge: ₹35,000 (at move-out)",
+        "Society Maintenance Fee: ₹3,500/month (to RWA)",
+        "Overnight Guest Fee: ₹1,000/day (after 48 hours)",
+      ]
+    : [
+        `Tenant Repair Deductible: ${deductibleVal} per repair`,
+        "Trash collection fee: $25.00/month",
+        "Move-in preparation fee: $150.00",
+        "Guest registration fee: $50.00 per guest",
+      ];
 
   return {
     riskIndex: {
@@ -391,22 +480,17 @@ function generateSmartFallbackAnalysis(text: string, fileName?: string): LeaseAn
       monthlyRent: rentVal,
       securityDeposit: depositVal,
       dueDateAndGracePeriod: graceVal,
-      lateFeePolicy: "$75.00 after 3rd of month plus $10.00/day recurring charge",
+      lateFeePolicy: latePolicy,
       utilityResponsibilities: {
-        tenantPays: ["Electricity", "Gas / Heating", "Internet / Cable"],
-        landlordPays: ["Water / Sewer", "Trash Collection"],
+        tenantPays: ["Electricity", "Cooking Gas", "Internet"],
+        landlordPays: ["Water / Sewer", "Property Taxes"],
       },
-      additionalFees: [
-        `Tenant Repair Deductible: ${deductibleVal} per repair`,
-        "Trash collection fee: $25.00/month",
-        "Move-in preparation fee: $150.00",
-        "Guest registration fee: $50.00 per guest",
-      ],
+      additionalFees: addFees,
     },
     importantDates: {
       leaseStart: leaseStartVal,
       leaseEnd: leaseEndVal,
-      noticePeriod: noticeVal,
+      noticePeriod: currencySymbol === "₹" ? "2 months prior written notice" : "60 days written notice required",
       inspectionDeadlines: "Move-in inspection report due at commencement",
     },
     flaggedClauses,

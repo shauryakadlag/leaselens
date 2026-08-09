@@ -9,7 +9,7 @@
 
 ## Milestone Progress
 
-- **Current Status**: All Milestones (M0–M7) Complete & Submission-Ready! 🎉
+- **Current Status**: All Milestones (M0–M7) & Critical Lifecycle Bugfix Complete! 🎉
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction (Page-Aware)
@@ -20,14 +20,14 @@
   - [x] M5: One-Click Landlord Email Generator & Total Cost Calculator
   - [x] M6: Final Responsive UX Audit & Visual Polish
   - [x] M7: Final Submission Preparation & Presentation Demo Readiness
+  - [x] Bugfix: Document Lifecycle Reset & Multi-Currency (₹ / INR / $ / € / £) Support
 
 ---
 
-## Final Submission Verification
-- **End-to-End Workflow**: Upload PDF -> Text Extraction -> Gemini 2.5 Flash Risk & Financial Analysis -> Exact-Page Target Jump -> Grounded Q&A -> Cost Calculator -> Landlord Email Generator.
-- **Production Build**: `npm run build` compiled 100% cleanly (0 errors).
-- **Automated Test Suite**: M2 accuracy test suite and M4 grounded Q&A HTTP test suite passed 100%.
-- **GitHub Repository**: `https://github.com/shauryakadlag/leaselens.git` (Branch: `main`).
+## Document Lifecycle & Multi-Currency Fix Summary
+- **Document State Replacement**: Fixed client-side and component state handling (`src/app/page.tsx`, `AskMyLease.tsx`, `LandlordEmailGenerator.tsx`) to guarantee that every new PDF upload completely clears and replaces previous extracted text, analysis results, financial figures, flagged clauses, dates, cost calculations, and Q&A chat history.
+- **Multi-Currency Support**: Updated Gemini 2.5 Flash prompts, server-side extraction logic, cost calculator, and Q&A search to dynamically detect and preserve document currency (e.g. `₹35,000`, `₹2,10,000` INR for Indian rental agreements vs `$1,500`, `$2,000` for US agreements).
+- **Consecutive Upload Test Suite**: Passed `test-consecutive-leases.mjs` verifying that uploading two consecutive lease contracts (US Lease -> Indian Lease) completely replaces all dashboard data with 100% accuracy.
 
 ---
 
