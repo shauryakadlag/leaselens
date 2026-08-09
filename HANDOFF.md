@@ -26,26 +26,25 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 
 ---
 
-## 2. Current Implementation State (Milestone 1 Complete)
+## 2. Current Implementation State (Milestone 2 Complete)
 
 - **Completed**:
-  - **M0**: Initialized Next.js project, TypeScript, Tailwind CSS, git repo, and GitHub connection.
-  - **M1**: 
-    - Created responsive drag-and-drop PDF upload UI (`src/app/page.tsx`).
-    - Implemented server route `/api/extract-pdf/route.ts` using `pdf-parse` (v2.4.5 `PDFParse` class).
-    - Integrated client-side file size and format validation (max 15MB, PDF only).
-    - Added scanned / image-only PDF detection with clear error guidance.
-    - Stored extracted text, page count, and word count in client session state (`extractedData`) ready for M2.
-    - Verified production build compiles cleanly (`npm run build`).
+  - **M0**: Next.js 16 project foundation, TypeScript, Tailwind CSS v4, Git repository, GitHub connection.
+  - **M1**: Drag-and-drop PDF upload UI, server PDF text extraction route (`/api/extract-pdf/route.ts`), file size & MIME type validation, scanned PDF detection.
+  - **M2**: 
+    - Installed `@google/genai` (Google Gen AI SDK v2.16.0).
+    - Built AI Lease Analysis route `/api/analyze-lease/route.ts` powered by **Gemini 2.5 Flash**.
+    - Defined structured JSON analysis schema (Tenant Risk Index, Financial Obligations, Key Dates, Flagged Clauses with plain-English & "why it matters" explanations).
+    - Included a fallback rule-based analyzer for offline / demo testing when `GEMINI_API_KEY` is not present.
+    - Integrated responsive LeaseLens Dashboard UI in `src/app/page.tsx` with expandable clause cards.
+    - Verified production build (`npm run build`) compiles cleanly with zero errors.
 
 - **Incomplete / Pending Future Milestones**:
-  - M2: AI Analysis Pipeline (Gemini integration & structured prompt output).
-  - M3: Risk Index & Summary Dashboard.
-  - M4: Flagged clauses panel & clause explanations.
-  - M5: Ask My Lease Q&A component.
-  - M6: Responsive Polish (Mobile & Desktop).
-  - M7: Landlord Email Generator.
-  - M8/M9: Testing, polish, final deployment.
+  - M3: Risk Dashboard & Clause Page Navigation refinements.
+  - M4: Grounded "Ask My Lease" Q&A component.
+  - M5: Optional Landlord Email Generator.
+  - M6: Mobile & Desktop responsiveness audit & polish.
+  - M7: Testing, final submission prep.
 
 ---
 
@@ -54,13 +53,14 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
+- **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Extraction**: `pdf-parse` (v2.4.5)
 - **Icons**: `lucide-react`
 
 ### Key Files
-- `src/app/page.tsx` — Main upload UI & extracted document state wrapper.
-- `src/app/api/extract-pdf/route.ts` — Server route for PDF binary parsing & validation.
-- `src/app/layout.tsx` — Root layout with global styling and metadata.
+- `src/app/page.tsx` — Main application UI with PDF Upload, Text Extraction, and AI Dashboard views.
+- `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis & fallback analyzer.
+- `src/app/api/extract-pdf/route.ts` — Server route for binary PDF text parsing.
 - `PROJECT_STATUS.md` — Active status and milestone tracking.
 - `HANDOFF.md` — Developer/Agent context handoff file.
 
@@ -80,17 +80,18 @@ npm run build
 
 ## 5. Required Environment Variables
 
-When AI analysis is integrated (M2+), create `.env.local`:
+To run live Gemini 2.5 Flash analysis, create `.env.local`:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
+*(Note: If `GEMINI_API_KEY` is omitted, LeaseLens gracefully uses the built-in smart fallback analyzer).*
 
 ---
 
 ## 6. Exact Next Recommended Task
 
-**Proceed to Milestone 2 (M2)**:
-- Create Gemini LLM analysis pipeline to take `extractedData.text` and produce structured analysis JSON (Tenant Risk Index, Financial Obligations, Important Deadlines, Flagged Clauses with plain-English explanations).
+**Proceed to Milestone 3 (M3)**:
+- Implement clause section navigation / page jump indicators and refine Risk Dashboard interactivity.
 
 ---
 
