@@ -1,4 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+
+// Cached Base64 Data URL for pdf.worker.mjs in Node.js server context
+let cachedWorkerDataUrl: string | null = null;
+
+function getWorkerDataUrl(): string {
+  if (cachedWorkerDataUrl) return cachedWorkerDataUrl;
+  try {
+    const workerPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "pdfjs-dist",
+      "legacy",
+      "build",
+      "pdf.worker.mjs"
+    );
+    if (fs.existsSync(workerPath)) {
+      const workerContent = fs.readFileSync(workerPath, "utf8");
+      cachedWorkerDataUrl = `data:application/javascript;base64,${Buffer.from(
+        workerContent
+      ).toString("base64")}`;
+      return cachedWorkerDataUrl;
+    }
+  } catch (err) {
+    console.warn("Failed to load pdf.worker.mjs directly from disk:", err);
+  }
+  return "";
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +68,22 @@ export async function POST(req: NextRequest) {
     let cleanText = "";
     let pageCount = 1;
 
-    // Robust PDF text extraction via pdfjs-dist (installed with pdf-parse)
     try {
       const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+
+      // Register Base64 worker Data URL to bypass Turbopack chunk resolution
+      const workerUrl = getWorkerDataUrl();
+      if (workerUrl) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+      }
+
       const loadingTask = pdfjsLib.getDocument({
         data: uint8Array,
         useSystemFonts: true,
         disableFontFace: true,
         verbosity: 0,
       });
+
       const pdfDoc = await loadingTask.promise;
       pageCount = pdfDoc.numPages;
 
@@ -56,28 +92,18 @@ export async function POST(req: NextRequest) {
         const page = await pdfDoc.getPage(i);
         const textContent = await page.getTextContent();
         const pageStrings = textContent.items
-          .map((item: any) => (item && item.str ? item.str : ""))
+          .map((item: any) => (item && typeof item.str === "string" ? item.str : ""))
           .filter(Boolean);
         fullText += pageStrings.join(" ") + "\n\n";
       }
 
       cleanText = fullText.replace(/\r\n/g, "\n").trim();
-    } catch (primaryErr: unknown) {
-      console.warn("Primary pdfjs extraction warning, trying secondary fallback:", primaryErr);
-      try {
-        const { PDFParse } = await import("pdf-parse");
-        const parser = new PDFParse({ data: uint8Array });
-        const textResult = await parser.getText();
-        cleanText = (textResult.text || "").replace(/\r\n/g, "\n").trim();
-        pageCount = textResult.total || textResult.pages?.length || 1;
-        await parser.destroy();
-      } catch (secondaryErr: unknown) {
-        console.error("PDF parse error:", secondaryErr);
-        return NextResponse.json(
-          { error: "Failed to read PDF document. The file may be password-protected or corrupted." },
-          { status: 422 }
-        );
-      }
+    } catch (pdfErr: any) {
+      console.error("PDF extraction error:", pdfErr);
+      return NextResponse.json(
+        { error: `Failed to read PDF document: ${pdfErr?.message || "The file may be corrupt or password-protected."}` },
+        { status: 422 }
+      );
     }
 
     // Check for scanned / image-only PDFs
@@ -102,10 +128,10 @@ export async function POST(req: NextRequest) {
       wordCount: words.length,
       extractedAt: new Date().toISOString(),
     });
-  } catch (error: unknown) {
-    console.error("PDF extraction route error:", error);
+  } catch (error: any) {
+    console.error("PDF extraction route unexpected error:", error);
     return NextResponse.json(
-      { error: "An internal server error occurred while processing the lease PDF." },
+      { error: `Server error: ${error?.message || "An unexpected error occurred during text extraction."}` },
       { status: 500 }
     );
   }
