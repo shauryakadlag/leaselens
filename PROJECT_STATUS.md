@@ -9,38 +9,32 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: Full Production UI Redesign — "Château Shadows" Design System (Completed)
+- **Current Milestone**: M5 — Landlord Email Generator, Total Cost Calculator & Final UX Polish (Completed)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction (Page-Aware)
   - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash + Server Citation Verification)
   - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
   - [x] M4: Grounded "Ask My Lease" AI Chat Assistant (3 Grounding Rules)
-  - [x] UI Redesign: Full Production "Château Shadows" Legal SaaS Redesign
-- **Next Milestone**:
-  - [ ] M5: Optional Landlord Clarification Email Generator (or next planned milestone)
+  - [x] UI Redesign: Production "Château Shadows" Legal SaaS Design System
+  - [x] M5: One-Click Landlord Email Generator, Total Cost Calculator & Final UX Polish
 
 ---
 
-## UI Redesign Summary ("Château Shadows" Design System)
-- **Primary Color**: `#FFF9EB` (Vanilla Custard) — Warm document canvas & reading background.
-- **Secondary Color**: `#9FB2AC` (Misty Sage) / `#EFF4F2` / `#2F4C43` — Supporting surfaces, verified states, and chip tags.
-- **Brand & Critical Action Color**: `#5D0D18` (Bloodstone) — Brand identity, primary CTAs, risk index highlights, and high-risk clause badges.
-- **Typography & Surfaces**: Restrained warm cream card surfaces (`#FFFDF7`), crisp legal typography, subtle borders (`#EADFCF`), clean information density without decorative AI gradients or neon colors.
-- **Redesigned Sections**:
-  1. **Landing & Upload Area**: Trustworthy legal software hero banner, drag-and-drop dropzone, and 3 core guarantee cards.
-  2. **Analysis Dashboard**: High-contrast Tenant Risk Index score card, 4-card Financial Summary grid, Utilities breakdown, and Important Dates timeline.
-  3. **Risk Clause Cards**: Color-coded severity badges (`High`, `Medium`, `Low`), quoted text blocks, plain-English explanations, why-it-matters warnings, and working `View on Page X` target jump buttons.
-  4. **PDF Viewer Studio**: Legal document viewer toolbar with page counter, target page jump bar, and comfortable reading container.
-  5. **Ask My Lease Chat**: Specialized legal assistant interface with 5 suggested question chips, grounded source badges, and styled conversation bubbles.
-- **Responsive Layout**: Desktop split-screen studio, tablet stacked layout, and mobile tabbed switcher (**Dashboard** / **PDF Document** / **Ask My Lease**).
+## M5 Implementation Summary
+- **One-Click Landlord Clarification Email Generator**: Built [`src/app/components/LandlordEmailGenerator.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/LandlordEmailGenerator.tsx) allowing tenants to select flagged clauses and auto-generate a formal, polite email requesting written clarification or amendments. Includes one-click copy-to-clipboard and `mailto:` links.
+- **Total Cost Calculator**: Built [`src/app/components/TotalCostCalculator.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/TotalCostCalculator.tsx) calculating:
+  - **Move-In Cash Required**: Security Deposit + First Month Rent + Admin/Move-in Fees + Pet Deposit.
+  - **Total 1-Year Financial Outlay**: 12 months base rent + deposits + recurring trash/utility fees + optional pet rent & renter's insurance estimates.
+  - **Interactive Toggles**: Include/exclude pet fees, renter's insurance, and calculate effective net monthly outlay.
+- **Full Scope Integration**: Integrated cleanly into [`src/app/page.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/page.tsx) under the Château Shadows design system across Mobile, Tablet, Laptop, and Desktop viewports.
 
 ---
 
 ## Technical Stack & Architecture
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS v4 + Château Shadows CSS variables
+- **Styling**: Tailwind CSS v4 + Château Shadows palette
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
 - **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL)

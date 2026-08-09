@@ -16,17 +16,18 @@ Residential lease agreements are long and complex. Tenants frequently miss key f
 An AI-powered residential lease document analyzer. Users upload a lease PDF, and LeaseLens delivers:
 1. Tenant Risk Index
 2. Financial Summary (exact dollar values and grace period terms)
-3. Important Dates & Deadlines (exact commencement and expiration dates)
-4. Flagged Risky/Unusual Clauses with Plain-English Explanations, Recommendations, and Verified Page References
-5. PDF Clause Navigation / Exact-Page Target Jump
-6. Grounded "Ask My Lease" Q&A (with strict 3-tier grounding rules)
-7. Optional Landlord Clarification Email Generator
+3. Total Lease Commitment & Cost Calculator (Move-In Cash + 1-Year Financial Outlay)
+4. Important Dates & Deadlines (exact commencement and expiration dates)
+5. Flagged Risky/Unusual Clauses with Plain-English Explanations, Recommendations, and Verified Page References
+6. PDF Clause Navigation / Exact-Page Target Jump
+7. Grounded "Ask My Lease" Q&A (with strict 3-tier grounding rules)
+8. One-Click Landlord Clarification Email Generator
 
 *Legal Disclaimer Notice*: LeaseLens is an informational document-analysis tool. It must NOT claim to offer legal advice.
 
 ---
 
-## 2. Current Implementation State (Full UI Redesign Complete)
+## 2. Current Implementation State (Milestone 5 Complete)
 
 - **Completed**:
   - **M0**: Next.js 16 project foundation, TypeScript, Tailwind CSS v4, Git repository, GitHub connection.
@@ -35,11 +36,8 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
   - **M3**: Built split-screen layout (`src/app/page.tsx` & `src/app/components/PDFViewer.tsx`), exact-page target jump navigation (`"View on Page X"`), responsive Mobile/Tablet view switcher tabs.
   - **M4**: Built grounded AI Q&A API route `/api/ask-lease/route.ts` using Gemini 2.5 Flash with strict 3-tier document grounding (unrelated rejection, unaddressed rejection, grounded Q&A).
   - **UI Redesign**: Transformed frontend into a production legal SaaS interface under the **"Château Shadows"** design system (`#FFF9EB` Vanilla Custard, `#9FB2AC` Misty Sage, `#5D0D18` Bloodstone).
+  - **M5**: Built `LandlordEmailGenerator.tsx` and `TotalCostCalculator.tsx`, fully integrated into `src/app/page.tsx` under Château Shadows design system.
   - Verified production build (`npm run build`) compiles 100% cleanly with zero errors.
-
-- **Incomplete / Pending Future Milestones**:
-  - M5: Optional Landlord Clarification Email Generator.
-  - M6: Final Submission Preparation.
 
 ---
 
@@ -54,13 +52,14 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 - **Icons**: `lucide-react`
 
 ### Key Files
-- `src/app/page.tsx` — Main application UI featuring Upload, Page-Aware Extraction, Split-Screen Studio, Dashboard & Ask My Lease views.
-- `src/app/globals.css` — Château Shadows design system variables and custom legal scrollbars.
+- `src/app/page.tsx` — Main application UI featuring Upload, Page-Aware Extraction, Split-Screen Studio, Dashboard, Cost Calculator, Email Generator & Ask My Lease views.
+- `src/app/components/LandlordEmailGenerator.tsx` — One-Click Landlord Email Generator component with clause selection, copy to clipboard, and mailto links.
+- `src/app/components/TotalCostCalculator.tsx` — Total Lease Cost & Financial Commitment Calculator with interactive toggles.
+- `src/app/components/PDFViewer.tsx` — PDF Document Viewer component with page controls and target fragment jumping.
+- `src/app/components/AskMyLease.tsx` — Grounded AI Q&A chat assistant component with suggested question chips.
 - `src/app/api/extract-pdf/route.ts` — Server route for page-aware PDF text parsing (`--- PAGE X ---`).
 - `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis, factual extraction priority, risk classification, and server-side page verification.
 - `src/app/api/ask-lease/route.ts` — Server route for grounded Gemini 2.5 Flash Q&A with 3-tier grounding classification.
-- `src/app/components/PDFViewer.tsx` — PDF Document Viewer component with page controls and target fragment jumping.
-- `src/app/components/AskMyLease.tsx` — Grounded AI Q&A chat assistant component with suggested question chips.
 - `PROJECT_STATUS.md` — Active status and milestone tracking.
 - `HANDOFF.md` — Developer/Agent context handoff file.
 

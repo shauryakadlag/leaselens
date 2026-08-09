@@ -30,6 +30,8 @@ import {
 import { LeaseAnalysisResult, FlaggedClause } from "./api/analyze-lease/route";
 import PDFViewer from "./components/PDFViewer";
 import AskMyLease from "./components/AskMyLease";
+import TotalCostCalculator from "./components/TotalCostCalculator";
+import LandlordEmailGenerator from "./components/LandlordEmailGenerator";
 
 interface ExtractedData {
   fileName: string;
@@ -618,7 +620,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* 3. Important Dates Grid */}
+                {/* 3. Total Cost Calculator (M5) */}
+                <div className={mobileTab === "chat" ? "hidden lg:block" : "block"}>
+                  <TotalCostCalculator financialSummary={analysisResult.financialSummary} />
+                </div>
+
+                {/* 4. Important Dates Grid */}
                 <div
                   className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-4 ${
                     mobileTab === "chat" ? "hidden lg:block" : "block"
@@ -652,7 +659,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* 4. Flagged Risky Clauses List */}
+                {/* 5. Flagged Risky Clauses List */}
                 <div
                   className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-4 ${
                     mobileTab === "chat" ? "hidden lg:block" : "block"
@@ -755,6 +762,14 @@ export default function Home() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* 6. One-Click Landlord Clarification Email Generator (M5) */}
+                <div className={mobileTab === "chat" ? "hidden lg:block" : "block"}>
+                  <LandlordEmailGenerator
+                    flaggedClauses={analysisResult.flaggedClauses}
+                    fileName={extractedData.fileName}
+                  />
                 </div>
 
                 {/* 5. Interactive "Ask My Lease" Q&A Assistant */}
