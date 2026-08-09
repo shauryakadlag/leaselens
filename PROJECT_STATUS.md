@@ -9,24 +9,27 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: M4 — Grounded "Ask My Lease" AI Chat Assistant (Completed)
+- **Current Milestone**: M4 — Grounded "Ask My Lease" AI Chat Assistant (Completed & Verified)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction
   - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash)
   - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
-  - [x] M4: Grounded "Ask My Lease" AI Chat Assistant
+  - [x] M4: Grounded "Ask My Lease" AI Chat Assistant (With strict grounding & 3-case classification fix)
 - **Next Milestone**:
-  - [ ] M5: Optional Landlord Clarification Email Generator (or next planned milestone)
+  - [ ] M5: Optional Landlord Clarification Email Generator
 
 ---
 
-## M4 Implementation Summary
+## M4 Implementation & Grounding Bugfix Summary
 - **Grounded AI Q&A Endpoint**: Built Next.js server route [`src/app/api/ask-lease/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/ask-lease/route.ts) invoking Gemini 2.5 Flash with strict system prompts enforcing the uploaded lease text as the sole source of truth.
-- **Document Grounding & Citations**: Ensures AI responses directly quote or reference contract sections and page numbers. When a topic is omitted from the lease text, explicitly notifies the tenant.
-- **Suggested Question Chips**: Provided 5 quick clickable query shortcuts for common tenant questions (rent due dates, pet rules/fees, move-out notice, utility breakdown, early termination penalties).
+- **Strict 3-Case Classification Logic**:
+  1. **Unrelated Questions**: Returns `"I can only answer questions about this lease agreement."`
+  2. **Unaddressed Lease Topics**: Returns `"This topic is not addressed in your lease agreement."`
+  3. **Document-Grounded Answers**: Answers concise plain-English facts strictly from lease text with source/section citations.
+- **Suggested Question Chips**: Provided 5 quick clickable query shortcuts for common tenant questions.
 - **Interactive Chat Component**: Built [`src/app/components/AskMyLease.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/AskMyLease.tsx) featuring message history, streaming loaders, markdown formatting, and grounded source badges.
-- **Smart Fallback Q&A Engine**: Built-in grounded search algorithm when `GEMINI_API_KEY` is omitted, guaranteeing 100% offline and demo-mode testability.
+- **Offline / Fallback Grounding Engine**: Mirrored the exact 3-case classification logic in offline mode to eliminate random passage matches.
 
 ---
 
@@ -36,7 +39,7 @@
 - **Styling**: Tailwind CSS v4
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
-- **PDF Extraction**: `pdf-parse` (v2.4.5)
+- **PDF Extraction**: `pdfjs-dist` legacy Base64 worker engine
 - **Icons**: `lucide-react`
 
 ---
