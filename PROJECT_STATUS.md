@@ -9,25 +9,27 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: M2 — AI Lease Analysis (Completed)
+- **Current Milestone**: M3 — Split-Screen PDF Viewer & Clause Page Navigation (Completed)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction
   - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash)
+  - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
 - **Next Milestone**:
-  - [ ] M3: Tenant Risk Dashboard & Clause Navigation (or next planned milestone)
+  - [ ] M4: Grounded "Ask My Lease" Q&A (or next planned milestone)
 
 ---
 
-## M2 Implementation Summary
-- **Gemini 2.5 Flash SDK Integration**: Installed `@google/genai` (v2.16.0) and integrated Gemini 2.5 Flash in `src/app/api/analyze-lease/route.ts`.
-- **Structured JSON Analysis Schema**:
-  - **Tenant Risk Index**: Score (0-100), Level (Low, Moderate, High, Critical), Summary.
-  - **Financial Summary**: Rent, Deposit, Grace Period, Late Fee Policy, Utilities (Tenant vs Landlord), Additional Fees.
-  - **Important Deadlines**: Start/End dates, Termination Notice period, Inspection deadlines.
-  - **Flagged Clauses**: Array of flagged clauses with Severity (High/Medium/Low), Category, Quoted Text, Plain-English Explanation, Why It Matters, and Page/Section references.
-- **Smart Fallback Analyzer**: Built-in rule-based fallback analyzer when `GEMINI_API_KEY` is not present, guaranteeing 100% offline and demo-mode testability.
-- **Interactive Dashboard UI**: Upgraded `src/app/page.tsx` with a responsive dashboard view featuring Risk Index score meter, Financial & Date grids, and expandable Flagged Clause cards.
+## M3 Implementation Summary
+- **Split-Screen Studio Layout**:
+  - Desktop / Laptop (`lg:` viewports): Integrated sticky split-screen view featuring interactive PDF Document Viewer on the left (5/12 columns) and AI Analysis Dashboard on the right (7/12 columns).
+- **Exact-Page Clause Navigation**:
+  - Added `"View on Page X"` target jump buttons on every flagged clause card.
+  - Automatically parses section/page reference and updates `PDFViewer` active page state instantly upon click.
+- **Mobile & Tablet Responsive Tab Switcher**:
+  - Implemented responsive tab controls (**Dashboard** vs **PDF Document**) for mobile/tablet screens.
+  - Tapping `"View on Page X"` on a mobile device automatically switches to the PDF tab and scrolls to target page X.
+- **PDFViewer Component**: Created [`src/app/components/PDFViewer.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/PDFViewer.tsx) supporting URL object lifecycle, page controls (Prev/Next/Current), target fragment jumping, and external opening.
 
 ---
 
@@ -35,8 +37,9 @@
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
+- **PDF Viewer**: Native embedded PDF viewer component with URL fragment page targeting (`#page=X`)
 - **AI SDK**: `@google/genai` (Gemini 2.5 Flash)
-- **PDF Extraction**: `pdf-parse` (v2.4.5)
+- **PDF Text Extraction**: `pdf-parse` (v2.4.5)
 - **Icons**: `lucide-react`
 
 ---

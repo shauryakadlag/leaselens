@@ -18,7 +18,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 2. Financial Summary
 3. Important Dates & Deadlines
 4. Flagged Risky/Unusual Clauses with Plain-English Explanations
-5. PDF Clause Navigation / References
+5. PDF Clause Navigation / Page Jump References
 6. Grounded "Ask My Lease" Q&A
 7. Optional Landlord Clarification Email Generator
 
@@ -26,24 +26,22 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 
 ---
 
-## 2. Current Implementation State (Milestone 2 Complete)
+## 2. Current Implementation State (Milestone 3 Complete)
 
 - **Completed**:
   - **M0**: Next.js 16 project foundation, TypeScript, Tailwind CSS v4, Git repository, GitHub connection.
   - **M1**: Drag-and-drop PDF upload UI, server PDF text extraction route (`/api/extract-pdf/route.ts`), file size & MIME type validation, scanned PDF detection.
-  - **M2**: 
-    - Installed `@google/genai` (Google Gen AI SDK v2.16.0).
-    - Built AI Lease Analysis route `/api/analyze-lease/route.ts` powered by **Gemini 2.5 Flash**.
-    - Defined structured JSON analysis schema (Tenant Risk Index, Financial Obligations, Key Dates, Flagged Clauses with plain-English & "why it matters" explanations).
-    - Included a fallback rule-based analyzer for offline / demo testing when `GEMINI_API_KEY` is not present.
-    - Integrated responsive LeaseLens Dashboard UI in `src/app/page.tsx` with expandable clause cards.
-    - Verified production build (`npm run build`) compiles cleanly with zero errors.
+  - **M2**: Installed `@google/genai` (Google Gen AI SDK v2.16.0), AI Lease Analysis route `/api/analyze-lease/route.ts` powered by **Gemini 2.5 Flash**, smart rule-based fallback analyzer for offline/demo testing.
+  - **M3**:
+    - Built split-screen layout (`src/app/page.tsx` & `src/app/components/PDFViewer.tsx`).
+    - Implemented exact-page target jump navigation (`"View on Page X"`) on every flagged clause card.
+    - Added responsive Mobile/Tablet view switcher tabs (**Dashboard** vs **PDF Document**).
+    - Verified production build (`npm run build`) compiles 100% cleanly with zero errors.
 
 - **Incomplete / Pending Future Milestones**:
-  - M3: Risk Dashboard & Clause Page Navigation refinements.
-  - M4: Grounded "Ask My Lease" Q&A component.
-  - M5: Optional Landlord Email Generator.
-  - M6: Mobile & Desktop responsiveness audit & polish.
+  - M4: Grounded "Ask My Lease" interactive Q&A component.
+  - M5: Optional Landlord Clarification Email Generator.
+  - M6: Responsive Mobile & Desktop visual refinement.
   - M7: Testing, final submission prep.
 
 ---
@@ -53,12 +51,14 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
+- **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Extraction**: `pdf-parse` (v2.4.5)
 - **Icons**: `lucide-react`
 
 ### Key Files
-- `src/app/page.tsx` — Main application UI with PDF Upload, Text Extraction, and AI Dashboard views.
+- `src/app/page.tsx` — Main application UI with Upload, Text Extraction, Split-Screen Studio & Dashboard views.
+- `src/app/components/PDFViewer.tsx` — PDF Document Viewer component with page controls and target fragment jumping.
 - `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis & fallback analyzer.
 - `src/app/api/extract-pdf/route.ts` — Server route for binary PDF text parsing.
 - `PROJECT_STATUS.md` — Active status and milestone tracking.
@@ -90,8 +90,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ## 6. Exact Next Recommended Task
 
-**Proceed to Milestone 3 (M3)**:
-- Implement clause section navigation / page jump indicators and refine Risk Dashboard interactivity.
+**Proceed to Milestone 4 (M4)**:
+- Implement grounded "Ask My Lease" Q&A component allowing tenants to ask natural language questions about their uploaded lease agreement.
 
 ---
 
