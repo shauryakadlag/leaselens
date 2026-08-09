@@ -9,27 +9,29 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: M4 — Grounded "Ask My Lease" AI Chat Assistant (Completed & Verified)
+- **Current Milestone**: M2 Accuracy Bugfix & Grounding Verification (Completed)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
-  - [x] M1: PDF Upload + Text Extraction
-  - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash)
+  - [x] M1: PDF Upload + Text Extraction (Page-Aware)
+  - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash + Server Citation Verification)
   - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
-  - [x] M4: Grounded "Ask My Lease" AI Chat Assistant (With strict grounding & 3-case classification fix)
+  - [x] M4: Grounded "Ask My Lease" AI Chat Assistant (3 Grounding Rules)
 - **Next Milestone**:
-  - [ ] M5: Optional Landlord Clarification Email Generator
+  - [ ] M5: Optional Landlord Clarification Email Generator (or next planned milestone)
 
 ---
 
-## M4 Implementation & Grounding Bugfix Summary
-- **Grounded AI Q&A Endpoint**: Built Next.js server route [`src/app/api/ask-lease/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/ask-lease/route.ts) invoking Gemini 2.5 Flash with strict system prompts enforcing the uploaded lease text as the sole source of truth.
-- **Strict 3-Case Classification Logic**:
-  1. **Unrelated Questions**: Returns `"I can only answer questions about this lease agreement."`
-  2. **Unaddressed Lease Topics**: Returns `"This topic is not addressed in your lease agreement."`
-  3. **Document-Grounded Answers**: Answers concise plain-English facts strictly from lease text with source/section citations.
-- **Suggested Question Chips**: Provided 5 quick clickable query shortcuts for common tenant questions.
-- **Interactive Chat Component**: Built [`src/app/components/AskMyLease.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/AskMyLease.tsx) featuring message history, streaming loaders, markdown formatting, and grounded source badges.
-- **Offline / Fallback Grounding Engine**: Mirrored the exact 3-case classification logic in offline mode to eliminate random passage matches.
+## M2 Accuracy Bugfix Summary
+- **Page-Aware PDF Extraction**: Updated [`src/app/api/extract-pdf/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/extract-pdf/route.ts) to structure extracted PDF text with explicit page headers (`--- PAGE X ---`), preserving page boundaries throughout the entire analysis pipeline.
+- **Server-Side Citation Verification**: Implemented `verifyAndFixClauseCitations` in [`src/app/api/analyze-lease/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/analyze-lease/route.ts) to verify and auto-correct quoted clause page numbers against actual document page text.
+- **Factual Extraction Accuracy**: Priority rules enforced for exact numerical values ($1,500.00 rent, $2,000.00 security deposit, $150.00 repair deductible), exact grace period (3rd day of the month), and explicit lease dates (January 1, 2027 – December 31, 2027).
+- **Risk Classification Rules**: Enforced general risk classification reasoning:
+  - `HIGH`: Unrestricted landlord entry without notice (Page 5).
+  - `MEDIUM`: Automatic renewal traps (Page 3), Late fee structure (Page 2), Repair deductible (Page 4).
+- **Grounding Verification (M4 Q&A)**: Preserved 3 strict grounding rules for Ask My Lease:
+  1. Unrelated questions → *"I can only answer questions about this lease agreement."*
+  2. Unaddressed lease topics → *"This topic is not addressed in your lease agreement."*
+  3. Answered lease topics → Answer based strictly on lease text with source citations.
 
 ---
 
@@ -39,18 +41,13 @@
 - **Styling**: Tailwind CSS v4
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
-- **PDF Extraction**: `pdfjs-dist` legacy Base64 worker engine
+- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL)
 - **Icons**: `lucide-react`
 
 ---
 
 ## Known Issues
 - None (Build passes cleanly with 0 compilation or type errors).
-
----
-
-## Required Environment Variables
-- `GEMINI_API_KEY`: Google Gemini API Key (Add to `.env.local` for live Gemini 2.5 Flash calls).
 
 ---
 
@@ -65,10 +62,3 @@ npm run build
 # Start production server
 npm run start
 ```
-
----
-
-## Core Project Constraints
-1. **Informational Tool Only**: LeaseLens must NEVER claim to provide legal advice or definitive legal conclusions.
-2. **First-Class Responsiveness**: Desktop and Mobile experiences are both primary requirements.
-3. **Simple & Reliable Architecture**: Avoid unnecessary databases, authentication systems, or over-engineered RAG frameworks for the hackathon MVP.

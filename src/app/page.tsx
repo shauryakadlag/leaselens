@@ -205,6 +205,9 @@ export default function Home() {
   };
 
   const parseTargetPage = (clause: FlaggedClause, totalPages: number): number => {
+    if (typeof clause.pageNumber === "number" && clause.pageNumber >= 1 && clause.pageNumber <= totalPages) {
+      return clause.pageNumber;
+    }
     if (!clause.pageReference) return 1;
     const match = clause.pageReference.match(/(?:page|p\.)\s*([0-9]+)/i) || clause.pageReference.match(/([0-9]+)/);
     if (match) {

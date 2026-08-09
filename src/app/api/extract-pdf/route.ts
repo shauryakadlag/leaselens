@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         const pageStrings = textContent.items
           .map((item: any) => (item && typeof item.str === "string" ? item.str : ""))
           .filter(Boolean);
-        fullText += pageStrings.join(" ") + "\n\n";
+        fullText += `--- PAGE ${i} ---\n` + pageStrings.join(" ") + "\n\n";
       }
 
       cleanText = fullText.replace(/\r\n/g, "\n").trim();
