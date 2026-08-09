@@ -28,7 +28,7 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
     {
       id: "welcome",
       sender: "ai",
-      text: `Hello! I am your grounded **Ask My Lease** assistant. Ask me anything about your uploaded lease document (*${fileName}*). Every answer is strictly extracted from your contract text.`,
+      text: `Hello! I am your **Ask My Lease** legal document assistant. Ask me any question about your uploaded lease agreement (*${fileName}*). Every answer is strictly extracted from your contract text.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -103,16 +103,16 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
     }
   };
 
-  // Simple Markdown Renderer helper for AI answers
   const renderFormattedText = (content: string) => {
     const lines = content.split("\n");
     return lines.map((line, idx) => {
-      // Bold syntax
-      const formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+      const formattedLine = line
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-[#1E1517]">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
       return (
         <p
           key={idx}
-          className={`${line.startsWith(">") ? "italic border-l-2 border-blue-500 pl-3 my-1 text-slate-300 font-mono text-[11px]" : "mb-1.5"}`}
+          className={`${line.startsWith(">") ? "italic border-l-2 border-[#5D0D18] pl-3 my-1 text-[#2F4C43] font-mono text-[11px]" : "mb-1.5"}`}
           dangerouslySetInnerHTML={{ __html: formattedLine }}
         />
       );
@@ -120,28 +120,28 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden flex flex-col h-[520px]">
+    <div className="bg-[#FFFDF7] border border-[#EADFCF] rounded-xl shadow-sm overflow-hidden flex flex-col h-[540px]">
       {/* Header */}
-      <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+      <div className="bg-[#F5ECCF] px-4 py-3 border-b border-[#E2D5B7] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-            <MessageSquare className="w-4 h-4 text-blue-400" />
+          <div className="w-8 h-8 rounded-lg bg-[#5D0D18]/10 border border-[#5D0D18]/20 flex items-center justify-center">
+            <MessageSquare className="w-4 h-4 text-[#5D0D18]" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-              Ask My Lease <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <h3 className="text-sm font-bold text-[#1E1517] flex items-center gap-1.5">
+              Ask My Lease <Sparkles className="w-3.5 h-3.5 text-[#5D0D18]" />
             </h3>
-            <p className="text-[11px] text-slate-400">Strictly grounded Q&amp;A on your uploaded agreement</p>
+            <p className="text-[11px] text-[#544B4C]">Document-grounded legal assistant</p>
           </div>
         </div>
 
-        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-          <ShieldCheck className="w-3 h-3" /> Grounded Source
+        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-[#2F4C43] font-medium bg-[#EFF4F2] border border-[#C3D2CD] px-2.5 py-0.5 rounded-full">
+          <ShieldCheck className="w-3 h-3 text-[#2F4C43]" /> Strict Source Grounding
         </span>
       </div>
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      {/* Messages Area */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#FFFDF7]">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -150,24 +150,24 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
             }`}
           >
             <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold ${
+              className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold ${
                 msg.sender === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-blue-400 border border-slate-700"
+                  ? "bg-[#5D0D18] text-[#FFF9EB]"
+                  : "bg-[#EFF4F2] text-[#2F4C43] border border-[#C3D2CD]"
               }`}
             >
               {msg.sender === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
             </div>
 
             <div
-              className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+              className={`max-w-[85%] sm:max-w-[78%] rounded-xl px-4 py-3 text-xs leading-relaxed ${
                 msg.sender === "user"
-                  ? "bg-blue-600 text-white rounded-tr-none shadow-md"
-                  : "bg-slate-950/80 border border-slate-800 text-slate-200 rounded-tl-none shadow-inner"
+                  ? "bg-[#5D0D18] text-[#FFF9EB] rounded-tr-none shadow-sm"
+                  : "bg-[#EFF4F2] border border-[#C3D2CD] text-[#1E1517] rounded-tl-none"
               }`}
             >
               {renderFormattedText(msg.text)}
-              <span className={`block text-[10px] mt-1.5 ${msg.sender === "user" ? "text-blue-200 text-right" : "text-slate-500"}`}>
+              <span className={`block text-[10px] mt-1.5 ${msg.sender === "user" ? "text-[#E5B8BC] text-right" : "text-[#7A6F70]"}`}>
                 {msg.timestamp}
               </span>
             </div>
@@ -176,12 +176,12 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
 
         {isLoading && (
           <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-lg bg-slate-800 text-blue-400 border border-slate-700 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-md bg-[#EFF4F2] text-[#2F4C43] border border-[#C3D2CD] flex items-center justify-center shrink-0">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl rounded-tl-none flex items-center gap-2 text-xs text-slate-400">
-              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-              <span>Searching lease agreement text...</span>
+            <div className="bg-[#EFF4F2] border border-[#C3D2CD] p-3 rounded-xl rounded-tl-none flex items-center gap-2 text-xs text-[#544B4C]">
+              <Loader2 className="w-4 h-4 text-[#5D0D18] animate-spin" />
+              <span>Analyzing lease agreement text...</span>
             </div>
           </div>
         )}
@@ -189,16 +189,16 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
       </div>
 
       {/* Suggested Questions Chips Bar */}
-      <div className="px-4 py-2 bg-slate-950/80 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        <HelpCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Suggested:</span>
+      <div className="px-4 py-2.5 bg-[#FAF4E6] border-t border-[#EADFCF] flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <HelpCircle className="w-3.5 h-3.5 text-[#5D0D18] shrink-0" />
+        <span className="text-[10px] font-semibold text-[#544B4C] uppercase tracking-wider shrink-0">Suggested:</span>
         {SUGGESTED_QUESTIONS.map((chip, idx) => (
           <button
             key={idx}
             type="button"
             disabled={isLoading}
             onClick={() => sendQuestion(chip)}
-            className="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors shrink-0 disabled:opacity-50"
+            className="px-3 py-1 rounded-md bg-[#FFFDF7] hover:bg-[#EFF4F2] border border-[#C3D2CD] text-[11px] text-[#2F4C43] font-medium transition-colors shrink-0 disabled:opacity-50 shadow-2xs"
           >
             {chip}
           </button>
@@ -211,21 +211,21 @@ export default function AskMyLease({ leaseText, fileName }: AskMyLeaseProps) {
           e.preventDefault();
           sendQuestion(inputQuery);
         }}
-        className="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2"
+        className="p-3 bg-[#F5ECCF] border-t border-[#E2D5B7] flex items-center gap-2"
       >
         <input
           type="text"
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask any question about your lease (e.g. rent due date, pet policy, notice period)..."
+          placeholder="Ask a question about your lease agreement (e.g. rent due date, pet policy, notice period)..."
           disabled={isLoading}
-          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-colors"
+          className="flex-1 bg-[#FFFDF7] border border-[#E2D5B7] rounded-lg px-3.5 py-2 text-xs text-[#1E1517] placeholder-[#807576] focus:outline-none focus:border-[#5D0D18] transition-colors"
         />
         <button
           type="submit"
           disabled={!inputQuery.trim() || isLoading}
-          className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors shrink-0 shadow-md shadow-blue-600/20"
+          className="p-2 rounded-lg bg-[#5D0D18] hover:bg-[#470912] disabled:bg-[#C8BDAB] disabled:text-[#807576] text-[#FFF9EB] transition-colors shrink-0 shadow-sm"
         >
           <Send className="w-4 h-4" />
         </button>

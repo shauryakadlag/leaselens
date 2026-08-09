@@ -9,36 +9,38 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: M2 Accuracy Bugfix & Grounding Verification (Completed)
+- **Current Milestone**: Full Production UI Redesign — "Château Shadows" Design System (Completed)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction (Page-Aware)
   - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash + Server Citation Verification)
   - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
   - [x] M4: Grounded "Ask My Lease" AI Chat Assistant (3 Grounding Rules)
+  - [x] UI Redesign: Full Production "Château Shadows" Legal SaaS Redesign
 - **Next Milestone**:
   - [ ] M5: Optional Landlord Clarification Email Generator (or next planned milestone)
 
 ---
 
-## M2 Accuracy Bugfix Summary
-- **Page-Aware PDF Extraction**: Updated [`src/app/api/extract-pdf/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/extract-pdf/route.ts) to structure extracted PDF text with explicit page headers (`--- PAGE X ---`), preserving page boundaries throughout the entire analysis pipeline.
-- **Server-Side Citation Verification**: Implemented `verifyAndFixClauseCitations` in [`src/app/api/analyze-lease/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/analyze-lease/route.ts) to verify and auto-correct quoted clause page numbers against actual document page text.
-- **Factual Extraction Accuracy**: Priority rules enforced for exact numerical values ($1,500.00 rent, $2,000.00 security deposit, $150.00 repair deductible), exact grace period (3rd day of the month), and explicit lease dates (January 1, 2027 – December 31, 2027).
-- **Risk Classification Rules**: Enforced general risk classification reasoning:
-  - `HIGH`: Unrestricted landlord entry without notice (Page 5).
-  - `MEDIUM`: Automatic renewal traps (Page 3), Late fee structure (Page 2), Repair deductible (Page 4).
-- **Grounding Verification (M4 Q&A)**: Preserved 3 strict grounding rules for Ask My Lease:
-  1. Unrelated questions → *"I can only answer questions about this lease agreement."*
-  2. Unaddressed lease topics → *"This topic is not addressed in your lease agreement."*
-  3. Answered lease topics → Answer based strictly on lease text with source citations.
+## UI Redesign Summary ("Château Shadows" Design System)
+- **Primary Color**: `#FFF9EB` (Vanilla Custard) — Warm document canvas & reading background.
+- **Secondary Color**: `#9FB2AC` (Misty Sage) / `#EFF4F2` / `#2F4C43` — Supporting surfaces, verified states, and chip tags.
+- **Brand & Critical Action Color**: `#5D0D18` (Bloodstone) — Brand identity, primary CTAs, risk index highlights, and high-risk clause badges.
+- **Typography & Surfaces**: Restrained warm cream card surfaces (`#FFFDF7`), crisp legal typography, subtle borders (`#EADFCF`), clean information density without decorative AI gradients or neon colors.
+- **Redesigned Sections**:
+  1. **Landing & Upload Area**: Trustworthy legal software hero banner, drag-and-drop dropzone, and 3 core guarantee cards.
+  2. **Analysis Dashboard**: High-contrast Tenant Risk Index score card, 4-card Financial Summary grid, Utilities breakdown, and Important Dates timeline.
+  3. **Risk Clause Cards**: Color-coded severity badges (`High`, `Medium`, `Low`), quoted text blocks, plain-English explanations, why-it-matters warnings, and working `View on Page X` target jump buttons.
+  4. **PDF Viewer Studio**: Legal document viewer toolbar with page counter, target page jump bar, and comfortable reading container.
+  5. **Ask My Lease Chat**: Specialized legal assistant interface with 5 suggested question chips, grounded source badges, and styled conversation bubbles.
+- **Responsive Layout**: Desktop split-screen studio, tablet stacked layout, and mobile tabbed switcher (**Dashboard** / **PDF Document** / **Ask My Lease**).
 
 ---
 
 ## Technical Stack & Architecture
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
+- **Styling**: Tailwind CSS v4 + Château Shadows CSS variables
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
 - **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL)

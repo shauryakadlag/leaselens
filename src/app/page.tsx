@@ -23,6 +23,9 @@ import {
   LayoutDashboard,
   Target,
   MessageSquare,
+  ShieldAlert,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 import { LeaseAnalysisResult, FlaggedClause } from "./api/analyze-lease/route";
 import PDFViewer from "./components/PDFViewer";
@@ -49,9 +52,9 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<LeaseAnalysisResult | null>(null);
   const [expandedClauseId, setExpandedClauseId] = useState<string | null>(null);
 
-  // M3/M4: Split Screen, Exact Page Navigation & Active Section Tabs
+  // Split Screen, Exact Page Navigation & Mobile/Tablet Active Tab Switcher
   const [pdfPage, setPdfPage] = useState<number>(1);
-  const [mobileTab, setMobileTab] = useState<"dashboard" | "pdf">("dashboard");
+  const [mobileTab, setMobileTab] = useState<"dashboard" | "pdf" | "chat">("dashboard");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,13 +71,13 @@ export default function Home() {
     setPdfPage(1);
 
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Only PDF documents are supported. Please upload a residential lease PDF.");
+      setError("Only PDF documents are supported. Please select a valid residential lease PDF.");
       setSelectedFile(null);
       return;
     }
 
     if (file.size > 15 * 1024 * 1024) {
-      setError("File size exceeds 15MB. Please upload a smaller lease PDF.");
+      setError("File size exceeds 15MB. Please upload a smaller lease PDF document.");
       setSelectedFile(null);
       return;
     }
@@ -148,29 +151,20 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || "Failed to extract text from the uploaded PDF.");
-        setIsExtracting(false);
         return;
       }
 
-      setExtractedData({
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-        numPages: data.numPages,
-        wordCount: data.wordCount,
-        text: data.text,
-        extractedAt: data.extractedAt,
-      });
+      setExtractedData(data);
+      runAiAnalysis(data.text, data.fileName);
     } catch (err: unknown) {
-      console.error("Extraction request error:", err);
-      setError("Network or server error occurred while extracting PDF text.");
+      console.error("PDF Extraction error:", err);
+      setError("An unexpected network error occurred while uploading your PDF document.");
     } finally {
       setIsExtracting(false);
     }
   };
 
-  const runAiAnalysis = async () => {
-    if (!extractedData) return;
-
+  const runAiAnalysis = async (leaseText: string, fileName: string) => {
     setIsAnalyzing(true);
     setError(null);
 
@@ -179,8 +173,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: extractedData.text,
-          fileName: extractedData.fileName,
+          text: leaseText,
+          fileName,
         }),
       });
 
@@ -188,7 +182,6 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || "AI lease analysis failed.");
-        setIsAnalyzing(false);
         return;
       }
 
@@ -226,398 +219,453 @@ export default function Home() {
     setMobileTab("pdf");
   };
 
-  const getSeverityBadge = (severity: "High" | "Medium" | "Low") => {
+  const getSeverityBadgeStyle = (severity: "High" | "Medium" | "Low") => {
     switch (severity) {
       case "High":
-        return "bg-red-500/10 text-red-400 border-red-500/20";
+        return "bg-[#5D0D18] text-[#FFF9EB] border-[#5D0D18]";
       case "Medium":
-        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+        return "bg-[#FDF4EC] text-[#944600] border-[#F2D0B3]";
       case "Low":
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        return "bg-[#EFF4F2] text-[#2F4C43] border-[#C3D2CD]";
+      default:
+        return "bg-[#EFF4F2] text-[#2F4C43] border-[#C3D2CD]";
     }
   };
 
-  const getRiskScoreColor = (score: number) => {
-    if (score >= 75) return { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30", label: "Critical Risk" };
-    if (score >= 50) return { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", label: "High Risk" };
-    if (score >= 30) return { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", label: "Moderate Risk" };
-    return { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", label: "Low Risk" };
+  const getRiskLevelStyle = (level: string) => {
+    switch (level) {
+      case "Critical":
+      case "High":
+        return {
+          bg: "bg-[#5D0D18]",
+          text: "text-[#FFF9EB]",
+          border: "border-[#5D0D18]",
+          badgeBg: "bg-[#F9ECEE]",
+          badgeText: "text-[#5D0D18]",
+        };
+      case "Moderate":
+      case "Medium":
+        return {
+          bg: "bg-[#944600]",
+          text: "text-[#FFF9EB]",
+          border: "border-[#944600]",
+          badgeBg: "bg-[#FDF4EC]",
+          badgeText: "text-[#944600]",
+        };
+      default:
+        return {
+          bg: "bg-[#2F4C43]",
+          text: "text-[#FFF9EB]",
+          border: "border-[#2F4C43]",
+          badgeBg: "bg-[#EFF4F2]",
+          badgeText: "text-[#2F4C43]",
+        };
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-3 sm:p-6 relative overflow-x-hidden font-sans">
-      {/* Background glow overlays */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-blue-600/15 via-indigo-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header Bar */}
-      <header className="w-full max-w-7xl flex items-center justify-between py-3 border-b border-slate-800/60 z-10">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={resetAll}>
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <FileCheck2 className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-[#FFF9EB] text-[#1E1517] flex flex-col font-sans">
+      {/* 1. Header Navigation Bar */}
+      <header className="bg-[#FFFDF7] border-b border-[#EADFCF] sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#5D0D18] flex items-center justify-center text-[#FFF9EB] shadow-xs">
+              <BookOpen className="w-5 h-5 stroke-[2]" />
+            </div>
+            <div>
+              <span className="font-serif font-bold text-lg text-[#1E1517] tracking-tight block leading-none">
+                LeaseLens
+              </span>
+              <span className="text-[11px] text-[#7A6F70] font-medium tracking-wide uppercase">
+                Know what you&apos;re signing.
+              </span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">LeaseLens</h1>
-            <p className="text-xs text-slate-400 font-medium">Know what you&apos;re signing.</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            {analysisResult ? "M4: Ask My Lease Ready" : extractedData ? "M1: Text Extracted" : "M1: PDF Upload"}
-          </span>
+          <div className="flex items-center gap-3">
+            {extractedData && (
+              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-[#2F4C43] bg-[#EFF4F2] border border-[#C3D2CD] px-3 py-1 rounded-full font-medium">
+                <FileCheck2 className="w-3.5 h-3.5 text-[#2F4C43]" />
+                {extractedData.fileName} ({extractedData.numPages} pages)
+              </span>
+            )}
+
+            {(selectedFile || extractedData) && (
+              <button
+                type="button"
+                onClick={resetAll}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5D0D18] hover:text-[#470912] bg-[#F9ECEE] hover:bg-[#F2D7DB] border border-[#D8B4B8] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Upload New Lease
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Main Workspace Area */}
-      <main className="w-full max-w-7xl my-auto py-6 z-10">
-        
-        {/* VIEW 1: UPLOAD DROPZONE */}
-        {!extractedData && !analysisResult && (
-          <div className="max-w-3xl mx-auto space-y-8">
+      {/* Main App Workspace Body */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Error Alert Box */}
+        {error && (
+          <div className="mb-6 bg-[#F9ECEE] border border-[#D8B4B8] rounded-xl p-4 flex items-start gap-3 text-xs text-[#5D0D18] shadow-xs">
+            <AlertCircle className="w-5 h-5 shrink-0 text-[#5D0D18] mt-0.5" />
+            <div className="flex-1">
+              <strong className="font-semibold block text-sm mb-0.5">Processing Alert</strong>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Upload / Landing Screen (Shown when no file is processed yet) */}
+        {!extractedData && !isExtracting && !isAnalyzing && (
+          <div className="max-w-3xl mx-auto my-4 sm:my-8 space-y-8">
+            {/* Hero Banner */}
             <div className="text-center space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider">
-                <Zap className="w-3.5 h-3.5" /> AI Residential Lease Analyzer
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                Upload Your Lease PDF
-              </h2>
-              <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                LeaseLens extracts document text and analyzes tenant risks, deadlines, and financial obligations in seconds.
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5D0D18] bg-[#F9ECEE] border border-[#D8B4B8] px-3.5 py-1 rounded-full uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#5D0D18]" /> Legal Document Analyzer
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#1E1517] tracking-tight">
+                Understand your lease before you sign.
+              </h1>
+              <p className="text-sm sm:text-base text-[#544B4C] max-w-xl mx-auto leading-relaxed">
+                LeaseLens analyzes residential agreements in seconds to flag hidden financial penalties, automatic renewal traps, and restrictive tenant clauses with verified page citations.
               </p>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,application/pdf"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
-
+            {/* Dropzone Container */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={!selectedFile && !isExtracting ? triggerFileSelect : undefined}
-              className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all duration-200 cursor-pointer backdrop-blur-sm ${
+              onClick={triggerFileSelect}
+              className={`bg-[#FFFDF7] border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all shadow-xs ${
                 isDragActive
-                  ? "border-blue-500 bg-blue-500/10 scale-[1.01]"
-                  : selectedFile
-                  ? "border-slate-700 bg-slate-900/60 cursor-default"
-                  : "border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60"
+                  ? "border-[#5D0D18] bg-[#F9ECEE]/50"
+                  : "border-[#C3D2CD] hover:border-[#5D0D18] hover:bg-[#FAF4E6]"
               }`}
             >
-              {!selectedFile ? (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-400 mx-auto flex items-center justify-center shadow-inner">
-                    <UploadCloud className="w-8 h-8 animate-bounce" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold text-slate-200">
-                      Drag &amp; drop your residential lease PDF here
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      or <span className="text-blue-400 font-medium hover:underline">browse files</span> from your computer
-                    </p>
-                  </div>
-                  <div className="pt-2 flex items-center justify-center gap-4 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> PDF Files Only
-                    </span>
-                    <span>•</span>
-                    <span>Max size: 15MB</span>
-                  </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+
+              <div className="w-16 h-16 rounded-2xl bg-[#5D0D18]/10 border border-[#5D0D18]/20 flex items-center justify-center mx-auto mb-4 text-[#5D0D18]">
+                <UploadCloud className="w-8 h-8 stroke-[1.5]" />
+              </div>
+
+              {selectedFile ? (
+                <div className="space-y-3">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2F4C43] bg-[#EFF4F2] border border-[#C3D2CD] px-3 py-1 rounded-full">
+                    <FileCheck2 className="w-4 h-4 text-[#2F4C43]" /> Selected: {selectedFile.name}
+                  </span>
+                  <p className="text-xs text-[#7A6F70]">{formatFileSize(selectedFile.size)}</p>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      extractText();
+                    }}
+                    className="inline-flex items-center gap-2 bg-[#5D0D18] hover:bg-[#470912] text-[#FFF9EB] px-6 py-2.5 rounded-xl font-semibold text-xs transition-colors shadow-sm"
+                  >
+                    <span>Analyze Lease Agreement</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-left">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div className="truncate">
-                        <p className="text-sm font-semibold text-slate-200 truncate">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {formatFileSize(selectedFile.size)}
-                        </p>
-                      </div>
-                    </div>
-                    {!isExtracting && (
-                      <button
-                        type="button"
-                        onClick={resetAll}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors"
-                      >
-                        Change
-                      </button>
-                    )}
-                  </div>
-
-                  {isExtracting ? (
-                    <div className="flex flex-col items-center justify-center space-y-3 py-4">
-                      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                      <p className="text-sm font-medium text-slate-300">
-                        Extracting text from lease agreement...
-                      </p>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={extractText}
-                      className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2"
-                    >
-                      Extract &amp; Process PDF Text <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {error && (
-              <div className="p-4 rounded-xl bg-red-950/40 border border-red-900/60 text-red-200 text-sm flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-semibold text-red-300">Notice</p>
-                  <p className="text-xs text-red-300/90">{error}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* VIEW 2: TEXT EXTRACTED (Ready for AI Trigger) */}
-        {extractedData && !analysisResult && (
-          <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-300">
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-sm space-y-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-100">
-                      PDF Text Extracted Successfully
-                    </h3>
-                    <p className="text-xs text-slate-400 truncate max-w-xs sm:max-w-md">
-                      {extractedData.fileName} ({formatFileSize(extractedData.fileSize)})
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-colors"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reset / New PDF
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
-                  <span className="block text-slate-400 text-xs font-medium mb-1">Document Pages</span>
-                  <span className="text-xl font-extrabold text-white">{extractedData.numPages}</span>
-                </div>
-                <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
-                  <span className="block text-slate-400 text-xs font-medium mb-1">Extracted Words</span>
-                  <span className="text-xl font-extrabold text-white">{extractedData.wordCount.toLocaleString()}</span>
-                </div>
-                <div className="col-span-2 sm:col-span-1 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60">
-                  <span className="block text-slate-400 text-xs font-medium mb-1">Status</span>
-                  <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Gemini
-                  </span>
-                </div>
-              </div>
-
-              {isAnalyzing ? (
-                <div className="flex flex-col items-center justify-center space-y-3 py-8 bg-blue-950/20 rounded-xl border border-blue-900/30">
-                  <Loader2 className="w-9 h-9 text-blue-400 animate-spin" />
-                  <p className="text-base font-semibold text-blue-200">
-                    Analyzing Lease with Gemini 2.5 Flash...
+                <div className="space-y-2">
+                  <h3 className="text-base font-bold text-[#1E1517]">
+                    Drag &amp; Drop your Lease PDF here
+                  </h3>
+                  <p className="text-xs text-[#544B4C]">
+                    or <span className="text-[#5D0D18] font-semibold underline underline-offset-2">browse files</span> from your computer
+                  </p>
+                  <p className="text-[11px] text-[#807576] pt-2">
+                    Supports standard PDF lease documents up to 15MB
                   </p>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={runAiAnalysis}
-                  className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 group"
-                >
-                  <Sparkles className="w-5 h-5 text-amber-300 group-hover:rotate-12 transition-transform" />
-                  Run AI Lease Analysis (Gemini 2.5)
-                  <ArrowRight className="w-5 h-5" />
-                </button>
               )}
+            </div>
+
+            {/* Value Proposition Guarantees */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-xs">
+              <div className="bg-[#FFFDF7] p-4 rounded-xl border border-[#EADFCF] space-y-1.5 shadow-2xs">
+                <ShieldCheck className="w-5 h-5 text-[#5D0D18]" />
+                <h4 className="font-bold text-[#1E1517]">Strictly Grounded Analysis</h4>
+                <p className="text-[#544B4C] leading-normal text-[11px]">
+                  All findings are extracted directly from your contract without hallucinations or unmentioned facts.
+                </p>
+              </div>
+
+              <div className="bg-[#FFFDF7] p-4 rounded-xl border border-[#EADFCF] space-y-1.5 shadow-2xs">
+                <Target className="w-5 h-5 text-[#5D0D18]" />
+                <h4 className="font-bold text-[#1E1517]">Exact-Page Jump Citations</h4>
+                <p className="text-[#544B4C] leading-normal text-[11px]">
+                  Every flagged clause maps directly to the specific page number in your PDF document.
+                </p>
+              </div>
+
+              <div className="bg-[#FFFDF7] p-4 rounded-xl border border-[#EADFCF] space-y-1.5 shadow-2xs">
+                <Zap className="w-5 h-5 text-[#5D0D18]" />
+                <h4 className="font-bold text-[#1E1517]">Interactive &quot;Ask My Lease&quot;</h4>
+                <p className="text-[#544B4C] leading-normal text-[11px]">
+                  Ask questions about rent, pets, utilities, or notice periods and receive instant grounded answers.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* VIEW 3: FULL LEASELENS STUDIO (M1-M4) */}
-        {analysisResult && selectedFile && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            
-            {/* Header Action Bar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-white">LeaseLens Split-Screen Studio</h2>
-                  <p className="text-xs text-slate-400">PDF Viewer • Risk Analysis • Grounded &ldquo;Ask My Lease&rdquo; Q&amp;A</p>
-                </div>
-              </div>
+        {/* Loading Indicator View */}
+        {(isExtracting || isAnalyzing) && (
+          <div className="max-w-xl mx-auto my-12 bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-8 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-[#5D0D18]/10 text-[#5D0D18] flex items-center justify-center mx-auto">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#1E1517]">
+                {isExtracting ? "Parsing PDF Text Pages..." : "Analyzing Lease Clauses & Terms..."}
+              </h3>
+              <p className="text-xs text-[#544B4C] mt-1">
+                {isExtracting
+                  ? "Extracting page-aware text structure from document"
+                  : "Evaluating Tenant Risk Index, Financial Obligations, and Page References"}
+              </p>
+            </div>
+            <div className="w-full bg-[#EADFCF] h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[#5D0D18] h-full w-2/3 animate-pulse rounded-full" />
+            </div>
+          </div>
+        )}
 
-              {/* Mobile View Selector Tabs */}
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="flex lg:hidden rounded-xl bg-slate-950 p-1 border border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setMobileTab("dashboard")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                      mobileTab === "dashboard"
-                        ? "bg-blue-600 text-white"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileTab("pdf")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                      mobileTab === "pdf"
-                        ? "bg-blue-600 text-white"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" /> PDF (P. {pdfPage})
-                  </button>
-                </div>
+        {/* 3. Main Split-Screen / Tabbed Workspace View (When analysis is ready) */}
+        {extractedData && analysisResult && !isExtracting && !isAnalyzing && (
+          <div className="space-y-6">
+            {/* Mobile / Tablet Tab Switcher Controls */}
+            <div className="lg:hidden bg-[#FFFDF7] border border-[#EADFCF] p-1.5 rounded-xl flex items-center justify-between text-xs font-semibold shadow-xs">
+              <button
+                type="button"
+                onClick={() => setMobileTab("dashboard")}
+                className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  mobileTab === "dashboard"
+                    ? "bg-[#5D0D18] text-[#FFF9EB] shadow-xs"
+                    : "text-[#544B4C] hover:text-[#1E1517]"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-colors"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> New PDF
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setMobileTab("pdf")}
+                className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  mobileTab === "pdf"
+                    ? "bg-[#5D0D18] text-[#FFF9EB] shadow-xs"
+                    : "text-[#544B4C] hover:text-[#1E1517]"
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>PDF Document ({extractedData.numPages})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileTab("chat")}
+                className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  mobileTab === "chat"
+                    ? "bg-[#5D0D18] text-[#FFF9EB] shadow-xs"
+                    : "text-[#544B4C] hover:text-[#1E1517]"
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Ask My Lease</span>
+              </button>
             </div>
 
-            {/* Split Screen Grid */}
+            {/* Desktop Split-Screen Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* LEFT COLUMN: PDF Document Viewer */}
+              {/* Left Column: PDF Viewer Studio (Sticky on Desktop) */}
               <div
-                className={`lg:col-span-5 lg:block ${
-                  mobileTab === "pdf" ? "block" : "hidden"
+                className={`lg:col-span-5 lg:sticky lg:top-20 ${
+                  mobileTab === "pdf" ? "block" : "hidden lg:block"
                 }`}
               >
-                <div className="sticky top-4">
-                  <PDFViewer
-                    file={selectedFile}
-                    currentPage={pdfPage}
-                    totalPages={extractedData?.numPages || 1}
-                    onPageChange={(page) => setPdfPage(page)}
-                  />
-                </div>
+                <PDFViewer
+                  file={selectedFile}
+                  currentPage={pdfPage}
+                  totalPages={extractedData.numPages}
+                  onPageChange={(page) => setPdfPage(page)}
+                />
               </div>
 
-              {/* RIGHT COLUMN: Dashboard & Ask My Lease Q&A */}
+              {/* Right Column: Analysis Dashboard & Ask My Lease Assistant */}
               <div
-                className={`lg:col-span-7 space-y-6 lg:block ${
-                  mobileTab === "dashboard" ? "block" : "hidden"
+                className={`lg:col-span-7 space-y-6 ${
+                  mobileTab === "dashboard" || mobileTab === "chat" ? "block" : "hidden lg:block"
                 }`}
               >
-                
-                {/* 1. Tenant Risk Index */}
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-blue-400" />
-                      <h3 className="text-lg font-bold text-slate-100">Tenant Risk Index</h3>
+                {/* 1. Tenant Risk Index Card */}
+                <div
+                  className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm ${
+                    mobileTab === "chat" ? "hidden lg:block" : "block"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#EADFCF] pb-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-5 h-5 text-[#5D0D18]" />
+                        <h2 className="text-lg font-serif font-bold text-[#1E1517]">
+                          Tenant Risk Index
+                        </h2>
+                      </div>
+                      <p className="text-xs text-[#544B4C]">
+                        Comprehensive risk evaluation based on flagged terms and one-sided clauses
+                      </p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRiskScoreColor(analysisResult.riskIndex.score).bg} ${getRiskScoreColor(analysisResult.riskIndex.score).text} ${getRiskScoreColor(analysisResult.riskIndex.score).border}`}>
-                      {analysisResult.riskIndex.level} Risk
-                    </span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1E1517]">
+                          {analysisResult.riskIndex.score}
+                        </span>
+                        <span className="text-xs text-[#7A6F70]"> / 100</span>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                          getRiskLevelStyle(analysisResult.riskIndex.level).badgeBg
+                        } ${getRiskLevelStyle(analysisResult.riskIndex.level).badgeText} border-current`}
+                      >
+                        {analysisResult.riskIndex.level} Risk
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-6 py-1">
-                    <div className="flex flex-col items-center justify-center w-28 h-28 rounded-2xl bg-slate-950 border border-slate-800 shrink-0">
-                      <span className={`text-4xl font-extrabold ${getRiskScoreColor(analysisResult.riskIndex.score).text}`}>
-                        {analysisResult.riskIndex.score}
+                  <p className="text-xs text-[#2C1A1D] mt-4 leading-relaxed bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF]">
+                    {analysisResult.riskIndex.summary}
+                  </p>
+                </div>
+
+                {/* 2. Financial Summary Panel */}
+                <div
+                  className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-4 ${
+                    mobileTab === "chat" ? "hidden lg:block" : "block"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 border-b border-[#EADFCF] pb-3">
+                    <DollarSign className="w-5 h-5 text-[#5D0D18]" />
+                    <h3 className="text-base font-bold text-[#1E1517]">Financial Summary</h3>
+                  </div>
+
+                  {/* 4 Financial Metric Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF]">
+                      <span className="text-[11px] font-semibold text-[#544B4C] uppercase tracking-wider block">
+                        Base Monthly Rent
                       </span>
-                      <span className="text-[10px] text-slate-500 font-medium">out of 100</span>
+                      <span className="text-base font-bold text-[#1E1517] mt-0.5 block">
+                        {analysisResult.financialSummary.monthlyRent}
+                      </span>
                     </div>
-                    <div className="space-y-2 text-center sm:text-left">
-                      <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                        {analysisResult.riskIndex.summary}
+
+                    <div className="bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF]">
+                      <span className="text-[11px] font-semibold text-[#544B4C] uppercase tracking-wider block">
+                        Security Deposit
+                      </span>
+                      <span className="text-base font-bold text-[#1E1517] mt-0.5 block">
+                        {analysisResult.financialSummary.securityDeposit}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF]">
+                      <span className="text-[11px] font-semibold text-[#544B4C] uppercase tracking-wider block">
+                        Due Date &amp; Grace Period
+                      </span>
+                      <span className="text-xs font-semibold text-[#1E1517] mt-0.5 block">
+                        {analysisResult.financialSummary.dueDateAndGracePeriod}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#FAF4E6] p-3.5 rounded-xl border border-[#EADFCF]">
+                      <span className="text-[11px] font-semibold text-[#544B4C] uppercase tracking-wider block">
+                        Late Fee Policy
+                      </span>
+                      <span className="text-xs font-semibold text-[#1E1517] mt-0.5 block">
+                        {analysisResult.financialSummary.lateFeePolicy}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Utilities Breakdown */}
+                  <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-[#EFF4F2] p-3 rounded-xl border border-[#C3D2CD] space-y-1">
+                      <span className="font-bold text-[#2F4C43] block">Tenant Pays:</span>
+                      <p className="text-[#1E1517]">
+                        {analysisResult.financialSummary.utilityResponsibilities.tenantPays.join(", ") || "None specified"}
+                      </p>
+                    </div>
+
+                    <div className="bg-[#EFF4F2] p-3 rounded-xl border border-[#C3D2CD] space-y-1">
+                      <span className="font-bold text-[#2F4C43] block">Landlord Pays:</span>
+                      <p className="text-[#1E1517]">
+                        {analysisResult.financialSummary.utilityResponsibilities.landlordPays.join(", ") || "None specified"}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Financial & Dates Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  
-                  {/* Financial Summary */}
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3">
-                    <div className="flex items-center gap-2 border-b border-slate-800 pb-2.5">
-                      <DollarSign className="w-4 h-4 text-emerald-400" />
-                      <h3 className="text-sm font-bold text-slate-100">Financial Summary</h3>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="text-slate-400">Monthly Rent</span>
-                        <span className="font-bold text-emerald-400">{analysisResult.financialSummary.monthlyRent}</span>
-                      </div>
-                      <div className="flex justify-between bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="text-slate-400">Security Deposit</span>
-                        <span className="font-semibold text-slate-200">{analysisResult.financialSummary.securityDeposit}</span>
-                      </div>
-                      <div className="flex justify-between bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="text-slate-400">Due &amp; Grace Period</span>
-                        <span className="font-medium text-slate-300">{analysisResult.financialSummary.dueDateAndGracePeriod}</span>
-                      </div>
-                    </div>
+                {/* 3. Important Dates Grid */}
+                <div
+                  className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-4 ${
+                    mobileTab === "chat" ? "hidden lg:block" : "block"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 border-b border-[#EADFCF] pb-3">
+                    <Calendar className="w-5 h-5 text-[#5D0D18]" />
+                    <h3 className="text-base font-bold text-[#1E1517]">Important Dates &amp; Deadlines</h3>
                   </div>
 
-                  {/* Important Dates */}
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3">
-                    <div className="flex items-center gap-2 border-b border-slate-800 pb-2.5">
-                      <Calendar className="w-4 h-4 text-indigo-400" />
-                      <h3 className="text-sm font-bold text-slate-100">Important Dates</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-[#FAF4E6] p-3 rounded-xl border border-[#EADFCF]">
+                      <span className="font-semibold text-[#544B4C] block text-[11px]">Lease Start Date</span>
+                      <span className="font-bold text-[#1E1517] text-xs">{analysisResult.importantDates.leaseStart}</span>
                     </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="text-slate-400 block text-[11px]">Lease Period</span>
-                        <span className="font-semibold text-slate-200">
-                          {analysisResult.importantDates.leaseStart} — {analysisResult.importantDates.leaseEnd}
-                        </span>
-                      </div>
-                      <div className="bg-slate-950/60 p-2.5 rounded-lg border border-indigo-950">
-                        <span className="text-indigo-300 font-semibold block text-[11px]">Notice for Non-Renewal</span>
-                        <p className="text-slate-300 text-[11px]">{analysisResult.importantDates.noticePeriod}</p>
-                      </div>
+
+                    <div className="bg-[#FAF4E6] p-3 rounded-xl border border-[#EADFCF]">
+                      <span className="font-semibold text-[#544B4C] block text-[11px]">Lease Expiration Date</span>
+                      <span className="font-bold text-[#1E1517] text-xs">{analysisResult.importantDates.leaseEnd}</span>
+                    </div>
+
+                    <div className="bg-[#FAF4E6] p-3 rounded-xl border border-[#EADFCF]">
+                      <span className="font-semibold text-[#544B4C] block text-[11px]">Required Notice Period</span>
+                      <span className="font-bold text-[#1E1517] text-xs">{analysisResult.importantDates.noticePeriod}</span>
+                    </div>
+
+                    <div className="bg-[#FAF4E6] p-3 rounded-xl border border-[#EADFCF]">
+                      <span className="font-semibold text-[#544B4C] block text-[11px]">Move-In Inspection</span>
+                      <span className="font-bold text-[#1E1517] text-xs">{analysisResult.importantDates.inspectionDeadlines}</span>
                     </div>
                   </div>
-
                 </div>
 
-                {/* 3. Flagged Clauses with Exact-Page Jump Buttons */}
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                {/* 4. Flagged Risky Clauses List */}
+                <div
+                  className={`bg-[#FFFDF7] border border-[#EADFCF] rounded-2xl p-6 shadow-sm space-y-4 ${
+                    mobileTab === "chat" ? "hidden lg:block" : "block"
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b border-[#EADFCF] pb-3">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-amber-400" />
-                      <h3 className="text-base font-bold text-slate-100">
+                      <AlertTriangle className="w-5 h-5 text-[#5D0D18]" />
+                      <h3 className="text-base font-bold text-[#1E1517]">
                         Flagged Clauses ({analysisResult.flaggedClauses.length})
                       </h3>
                     </div>
-                    <span className="text-xs text-slate-400">Click &apos;View on Page X&apos; to navigate PDF</span>
+                    <span className="text-xs text-[#7A6F70]">Click &apos;View on Page X&apos; to navigate PDF</span>
                   </div>
 
                   <div className="space-y-3">
@@ -629,33 +677,34 @@ export default function Home() {
                       return (
                         <div
                           key={clause.id}
-                          className={`border rounded-xl bg-slate-950/70 overflow-hidden transition-all ${
-                            isPageActive ? "border-blue-500/60 ring-1 ring-blue-500/30" : "border-slate-800"
+                          className={`border rounded-xl bg-[#FFFDF7] overflow-hidden transition-all ${
+                            isPageActive ? "border-[#5D0D18] ring-1 ring-[#5D0D18]/30" : "border-[#EADFCF]"
                           }`}
                         >
                           <div className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-3">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${getSeverityBadge(clause.severity)}`}>
+                                  <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${getSeverityBadgeStyle(clause.severity)}`}>
                                     {clause.severity}
                                   </span>
-                                  <span className="text-xs font-semibold text-slate-200">
+                                  <span className="text-xs font-bold text-[#1E1517]">
                                     {clause.title}
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-slate-400">
+                                <p className="text-[11px] text-[#7A6F70]">
                                   Category: {clause.category}
                                 </p>
                               </div>
 
+                              {/* Target Page Jump Button */}
                               <button
                                 type="button"
                                 onClick={() => jumpToClausePage(clause)}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                                   isPageActive
-                                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                                    : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                    ? "bg-[#5D0D18] text-[#FFF9EB] shadow-xs"
+                                    : "bg-[#F9ECEE] hover:bg-[#F2D7DB] text-[#5D0D18] border border-[#D8B4B8]"
                                 }`}
                               >
                                 <Target className="w-3.5 h-3.5" />
@@ -666,32 +715,39 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => setExpandedClauseId(isExpanded ? null : clause.id)}
-                              className="w-full pt-1 flex items-center justify-between text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                              className="w-full pt-1 flex items-center justify-between text-xs text-[#544B4C] hover:text-[#1E1517] transition-colors"
                             >
                               <span>{isExpanded ? "Hide details" : "Show explanation & quoted text"}</span>
                               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
 
                             {isExpanded && (
-                              <div className="pt-2 border-t border-slate-800/80 space-y-3 text-xs">
-                                <div className="bg-slate-900 p-3 rounded-lg border border-slate-800/80 space-y-1">
-                                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Quoted Clause</span>
-                                  <blockquote className="italic text-slate-300 font-mono text-[11px]">
+                              <div className="pt-2 border-t border-[#EADFCF] space-y-3 text-xs">
+                                <div className="bg-[#F5ECCF] p-3 rounded-lg border border-[#E2D5B7] space-y-1">
+                                  <span className="text-[10px] font-semibold text-[#544B4C] uppercase tracking-wider block">
+                                    Quoted Clause Text (Page {targetPage})
+                                  </span>
+                                  <blockquote className="italic text-[#1E1517] font-mono text-[11px]">
                                     &ldquo;{clause.originalText}&rdquo;
                                   </blockquote>
                                 </div>
 
                                 <div className="space-y-1">
-                                  <span className="font-semibold text-blue-400">Plain-English Explanation:</span>
-                                  <p className="text-slate-300 leading-relaxed">{clause.explanation}</p>
+                                  <span className="font-bold text-[#1E1517] text-[11px] block">Plain-English Explanation:</span>
+                                  <p className="text-[#544B4C] leading-relaxed text-xs">{clause.explanation}</p>
                                 </div>
 
-                                <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-amber-200 space-y-1">
-                                  <span className="font-bold text-amber-400 flex items-center gap-1 text-xs">
-                                    <Info className="w-3.5 h-3.5" /> Why This Matters
-                                  </span>
-                                  <p className="text-xs text-amber-200/90 leading-relaxed">{clause.whyItMatters}</p>
+                                <div className="space-y-1 bg-[#F9ECEE] p-2.5 rounded-lg border border-[#D8B4B8]">
+                                  <span className="font-bold text-[#5D0D18] text-[11px] block">Why This Matters:</span>
+                                  <p className="text-[#2C1A1D] leading-relaxed text-xs">{clause.whyItMatters}</p>
                                 </div>
+
+                                {clause.recommendation && (
+                                  <div className="space-y-1 bg-[#EFF4F2] p-2.5 rounded-lg border border-[#C3D2CD]">
+                                    <span className="font-bold text-[#2F4C43] text-[11px] block">Recommended Action:</span>
+                                    <p className="text-[#1E1517] leading-relaxed text-xs">{clause.recommendation}</p>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -701,28 +757,30 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* 4. MILESTONE 4: GROUNDED "ASK MY LEASE" AI CHAT ASSISTANT */}
-                {extractedData && (
-                  <AskMyLease
-                    leaseText={extractedData.text}
-                    fileName={extractedData.fileName}
-                  />
-                )}
-
+                {/* 5. Interactive "Ask My Lease" Q&A Assistant */}
+                <div
+                  className={`${
+                    mobileTab === "chat" || mobileTab === "dashboard" ? "block" : "hidden lg:block"
+                  }`}
+                >
+                  <AskMyLease leaseText={extractedData.text} fileName={extractedData.fileName} />
+                </div>
               </div>
-
             </div>
-
           </div>
         )}
-
       </main>
 
-      {/* Footer Disclaimer */}
-      <footer className="w-full max-w-7xl py-4 border-t border-slate-800/60 text-center text-xs text-slate-500 z-10 space-y-1">
-        <p>
-          <strong className="text-slate-400">Legal Disclaimer:</strong> LeaseLens is an informational document-analysis tool. It does not provide legal advice or definitive legal conclusions.
-        </p>
+      {/* Footer Legal Disclaimer */}
+      <footer className="bg-[#FFFDF7] border-t border-[#EADFCF] py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 text-center text-[11px] text-[#7A6F70] space-y-1">
+          <p className="font-semibold text-[#544B4C]">
+            LeaseLens — Know what you&apos;re signing.
+          </p>
+          <p>
+            Informational document-analysis tool only. Does not constitute legal advice or formal legal representation.
+          </p>
+        </div>
       </footer>
     </div>
   );
