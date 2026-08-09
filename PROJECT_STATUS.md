@@ -9,27 +9,24 @@
 
 ## Milestone Progress
 
-- **Current Milestone**: M3 — Split-Screen PDF Viewer & Clause Page Navigation (Completed)
+- **Current Milestone**: M4 — Grounded "Ask My Lease" AI Chat Assistant (Completed)
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction
   - [x] M2: AI Lease Analysis Pipeline (Gemini 2.5 Flash)
   - [x] M3: Split-Screen PDF Viewer & Exact-Page Clause Navigation
+  - [x] M4: Grounded "Ask My Lease" AI Chat Assistant
 - **Next Milestone**:
-  - [ ] M4: Grounded "Ask My Lease" Q&A (or next planned milestone)
+  - [ ] M5: Optional Landlord Clarification Email Generator (or next planned milestone)
 
 ---
 
-## M3 Implementation Summary
-- **Split-Screen Studio Layout**:
-  - Desktop / Laptop (`lg:` viewports): Integrated sticky split-screen view featuring interactive PDF Document Viewer on the left (5/12 columns) and AI Analysis Dashboard on the right (7/12 columns).
-- **Exact-Page Clause Navigation**:
-  - Added `"View on Page X"` target jump buttons on every flagged clause card.
-  - Automatically parses section/page reference and updates `PDFViewer` active page state instantly upon click.
-- **Mobile & Tablet Responsive Tab Switcher**:
-  - Implemented responsive tab controls (**Dashboard** vs **PDF Document**) for mobile/tablet screens.
-  - Tapping `"View on Page X"` on a mobile device automatically switches to the PDF tab and scrolls to target page X.
-- **PDFViewer Component**: Created [`src/app/components/PDFViewer.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/PDFViewer.tsx) supporting URL object lifecycle, page controls (Prev/Next/Current), target fragment jumping, and external opening.
+## M4 Implementation Summary
+- **Grounded AI Q&A Endpoint**: Built Next.js server route [`src/app/api/ask-lease/route.ts`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/api/ask-lease/route.ts) invoking Gemini 2.5 Flash with strict system prompts enforcing the uploaded lease text as the sole source of truth.
+- **Document Grounding & Citations**: Ensures AI responses directly quote or reference contract sections and page numbers. When a topic is omitted from the lease text, explicitly notifies the tenant.
+- **Suggested Question Chips**: Provided 5 quick clickable query shortcuts for common tenant questions (rent due dates, pet rules/fees, move-out notice, utility breakdown, early termination penalties).
+- **Interactive Chat Component**: Built [`src/app/components/AskMyLease.tsx`](file:///c:/Users/Lenovo/Documents/leaselens/src/app/components/AskMyLease.tsx) featuring message history, streaming loaders, markdown formatting, and grounded source badges.
+- **Smart Fallback Q&A Engine**: Built-in grounded search algorithm when `GEMINI_API_KEY` is omitted, guaranteeing 100% offline and demo-mode testability.
 
 ---
 
@@ -37,9 +34,9 @@
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
-- **PDF Viewer**: Native embedded PDF viewer component with URL fragment page targeting (`#page=X`)
-- **AI SDK**: `@google/genai` (Gemini 2.5 Flash)
-- **PDF Text Extraction**: `pdf-parse` (v2.4.5)
+- **AI Model**: Gemini 2.5 Flash via `@google/genai`
+- **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
+- **PDF Extraction**: `pdf-parse` (v2.4.5)
 - **Icons**: `lucide-react`
 
 ---

@@ -22,9 +22,11 @@ import {
   BookOpen,
   LayoutDashboard,
   Target,
+  MessageSquare,
 } from "lucide-react";
 import { LeaseAnalysisResult, FlaggedClause } from "./api/analyze-lease/route";
 import PDFViewer from "./components/PDFViewer";
+import AskMyLease from "./components/AskMyLease";
 
 interface ExtractedData {
   fileName: string;
@@ -47,7 +49,7 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<LeaseAnalysisResult | null>(null);
   const [expandedClauseId, setExpandedClauseId] = useState<string | null>(null);
 
-  // M3: Split Screen & Exact Page Navigation State
+  // M3/M4: Split Screen, Exact Page Navigation & Active Section Tabs
   const [pdfPage, setPdfPage] = useState<number>(1);
   const [mobileTab, setMobileTab] = useState<"dashboard" | "pdf">("dashboard");
 
@@ -202,7 +204,6 @@ export default function Home() {
     }
   };
 
-  // M3: Parse exact page number from clause page reference string
   const parseTargetPage = (clause: FlaggedClause, totalPages: number): number => {
     if (!clause.pageReference) return 1;
     const match = clause.pageReference.match(/(?:page|p\.)\s*([0-9]+)/i) || clause.pageReference.match(/([0-9]+)/);
@@ -212,7 +213,6 @@ export default function Home() {
         return pageNum;
       }
     }
-    // Fallback based on clause index heuristic
     return 1;
   };
 
@@ -260,8 +260,8 @@ export default function Home() {
 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-            {analysisResult ? "M3: Split-Screen & Page Navigation" : extractedData ? "M1: Text Extracted" : "M1: PDF Upload"}
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            {analysisResult ? "M4: Ask My Lease Ready" : extractedData ? "M1: Text Extracted" : "M1: PDF Upload"}
           </span>
         </div>
       </header>
@@ -452,7 +452,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* VIEW 3: MILESTONE 3 SPLIT-SCREEN VIEWER + ANALYSIS DASHBOARD */}
+        {/* VIEW 3: FULL LEASELENS STUDIO (M1-M4) */}
         {analysisResult && selectedFile && (
           <div className="space-y-6 animate-in fade-in duration-500">
             
@@ -464,7 +464,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-white">LeaseLens Split-Screen Studio</h2>
-                  <p className="text-xs text-slate-400">Interactive PDF Document Viewer &amp; AI Analysis Dashboard</p>
+                  <p className="text-xs text-slate-400">PDF Viewer • Risk Analysis • Grounded &ldquo;Ask My Lease&rdquo; Q&amp;A</p>
                 </div>
               </div>
 
@@ -505,7 +505,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Split Screen Grid (Desktop: 2 columns, Mobile: Tabbed View) */}
+            {/* Split Screen Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
               {/* LEFT COLUMN: PDF Document Viewer */}
@@ -524,7 +524,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: AI Analysis Dashboard */}
+              {/* RIGHT COLUMN: Dashboard & Ask My Lease Q&A */}
               <div
                 className={`lg:col-span-7 space-y-6 lg:block ${
                   mobileTab === "dashboard" ? "block" : "hidden"
@@ -646,7 +646,6 @@ export default function Home() {
                                 </p>
                               </div>
 
-                              {/* Target Page Jump Action Button */}
                               <button
                                 type="button"
                                 onClick={() => jumpToClausePage(clause)}
@@ -661,7 +660,6 @@ export default function Home() {
                               </button>
                             </div>
 
-                            {/* Accordion toggle for details */}
                             <button
                               type="button"
                               onClick={() => setExpandedClauseId(isExpanded ? null : clause.id)}
@@ -671,7 +669,6 @@ export default function Home() {
                               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
 
-                            {/* Expanded Details */}
                             {isExpanded && (
                               <div className="pt-2 border-t border-slate-800/80 space-y-3 text-xs">
                                 <div className="bg-slate-900 p-3 rounded-lg border border-slate-800/80 space-y-1">
@@ -700,6 +697,14 @@ export default function Home() {
                     })}
                   </div>
                 </div>
+
+                {/* 4. MILESTONE 4: GROUNDED "ASK MY LEASE" AI CHAT ASSISTANT */}
+                {extractedData && (
+                  <AskMyLease
+                    leaseText={extractedData.text}
+                    fileName={extractedData.fileName}
+                  />
+                )}
 
               </div>
 
