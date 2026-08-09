@@ -70,6 +70,7 @@ export default function Home() {
     setError(null);
     setExtractedData(null);
     setAnalysisResult(null);
+    setExpandedClauseId(null);
     setPdfPage(1);
 
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -134,15 +135,20 @@ export default function Home() {
     }
   };
 
-  const extractText = async () => {
-    if (!selectedFile) return;
+  const extractText = async (targetFile?: File) => {
+    const fileToExtract = targetFile || selectedFile;
+    if (!fileToExtract) return;
 
     setIsExtracting(true);
+    setIsAnalyzing(true);
     setError(null);
+    setExtractedData(null);
+    setAnalysisResult(null);
+    setExpandedClauseId(null);
 
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      formData.append("file", fileToExtract);
 
       const res = await fetch("/api/extract-pdf", {
         method: "POST",
@@ -153,16 +159,21 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || "Failed to extract text from the uploaded PDF.");
+        setIsExtracting(false);
+        setIsAnalyzing(false);
         return;
       }
 
       setExtractedData(data);
-      runAiAnalysis(data.text, data.fileName);
+      setIsExtracting(false);
+
+      // Await AI analysis with the freshly extracted text from this exact document
+      await runAiAnalysis(data.text, data.fileName);
     } catch (err: unknown) {
       console.error("PDF Extraction error:", err);
       setError("An unexpected network error occurred while uploading your PDF document.");
-    } finally {
       setIsExtracting(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -184,6 +195,11 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || "AI lease analysis failed.");
+        return;
+      }
+
+      if (!data.analysis || typeof data.analysis !== "object") {
+        setError("Invalid analysis response payload from server.");
         return;
       }
 
@@ -340,7 +356,13 @@ export default function Home() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={triggerFileSelect}
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.tagName.toLowerCase() === "label" || target.closest("label") || target.tagName.toLowerCase() === "button" || target.closest("button")) {
+                  return;
+                }
+                triggerFileSelect();
+              }}
               className={`bg-[#FFFDF7] border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all shadow-xs ${
                 isDragActive
                   ? "border-[#5D0D18] bg-[#F9ECEE]/50"
@@ -349,6 +371,7 @@ export default function Home() {
             >
               <input
                 ref={fileInputRef}
+                id="leaselens-mobile-file-input"
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={handleFileInputChange}
@@ -384,7 +407,15 @@ export default function Home() {
                     Drag &amp; Drop your Lease PDF here
                   </h3>
                   <p className="text-xs text-[#544B4C]">
-                    or <span className="text-[#5D0D18] font-semibold underline underline-offset-2">browse files</span> from your computer
+                    or{" "}
+                    <label
+                      htmlFor="leaselens-mobile-file-input"
+                      className="text-[#5D0D18] font-semibold underline underline-offset-2 cursor-pointer select-none py-1 px-1 inline-block"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Browse Files
+                    </label>{" "}
+                    from your computer
                   </p>
                   <p className="text-[11px] text-[#807576] pt-2">
                     Supports standard PDF lease documents up to 15MB

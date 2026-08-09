@@ -177,6 +177,9 @@ ${text.slice(0, 45000)}
 
 // Server-side citation verification & page number auto-correction helper
 export function verifyAndFixClauseCitations(clauses: FlaggedClause[], fullText: string): FlaggedClause[] {
+  if (!Array.isArray(clauses)) {
+    return [];
+  }
   const pages: { pageNum: number; content: string; lowerContent: string }[] = [];
   const pageBlocks = fullText.split(/--- PAGE ([0-9]+) ---/i);
 

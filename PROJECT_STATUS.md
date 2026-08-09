@@ -9,7 +9,7 @@
 
 ## Milestone Progress
 
-- **Current Status**: All Milestones (M0–M7) & Critical Lifecycle Bugfix Complete! 🎉
+- **Current Status**: All Milestones (M0–M7) & Critical Bugfixes Complete! 🎉
 - **Completed Milestones**:
   - [x] M0: Foundation + GitHub Setup
   - [x] M1: PDF Upload + Text Extraction (Page-Aware)
@@ -20,14 +20,9 @@
   - [x] M5: One-Click Landlord Email Generator & Total Cost Calculator
   - [x] M6: Final Responsive UX Audit & Visual Polish
   - [x] M7: Final Submission Preparation & Presentation Demo Readiness
-  - [x] Bugfix: Document Lifecycle Reset & Multi-Currency (₹ / INR / $ / € / £) Support
-
----
-
-## Document Lifecycle & Multi-Currency Fix Summary
-- **Document State Replacement**: Fixed client-side and component state handling (`src/app/page.tsx`, `AskMyLease.tsx`, `LandlordEmailGenerator.tsx`) to guarantee that every new PDF upload completely clears and replaces previous extracted text, analysis results, financial figures, flagged clauses, dates, cost calculations, and Q&A chat history.
-- **Multi-Currency Support**: Updated Gemini 2.5 Flash prompts, server-side extraction logic, cost calculator, and Q&A search to dynamically detect and preserve document currency (e.g. `₹35,000`, `₹2,10,000` INR for Indian rental agreements vs `$1,500`, `$2,000` for US agreements).
-- **Consecutive Upload Test Suite**: Passed `test-consecutive-leases.mjs` verifying that uploading two consecutive lease contracts (US Lease -> Indian Lease) completely replaces all dashboard data with 100% accuracy.
+  - [x] Bugfix 1: Mobile File Picker Trigger (`<label htmlFor="leaselens-mobile-file-input">` direct HTML binding)
+  - [x] Bugfix 2: Laptop First-Upload Extraction -> Analysis Payload Race Condition Fix
+  - [x] Netlify Serverless Compatibility: W3C Spec-Compliant `DOMMatrix` class for `pdfjs-dist` in serverless Node.js
 
 ---
 
@@ -37,7 +32,7 @@
 - **Styling**: Tailwind CSS v4 + Château Shadows palette
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
-- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL)
+- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL + W3C DOMMatrix polyfill)
 - **Icons**: `lucide-react`
 
 ---

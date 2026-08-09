@@ -27,7 +27,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 
 ---
 
-## 2. Final Implementation State (All Milestones M0–M7 & Lifecycle Fix Complete)
+## 2. Final Implementation State (All Milestones M0–M7 & Production Bugfixes Complete)
 
 - **Completed**:
   - **M0**: Next.js 16 project foundation, TypeScript, Tailwind CSS v4, Git repository, GitHub connection.
@@ -39,7 +39,8 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
   - **M5**: Built `LandlordEmailGenerator.tsx` and `TotalCostCalculator.tsx`, fully integrated into `src/app/page.tsx`.
   - **M6**: Completed final responsive UX audit and visual polish across 320px–1440px+ viewports.
   - **M7**: Final submission preparation, README documentation polish, production build verification, presentation demo packaging.
-  - **Lifecycle Bugfix**: Guaranteed complete state replacement upon new document uploads and added native multi-currency support (`₹`, `$`, `€`, `£`, `Rs.`).
+  - **Bugfix 1 (Mobile File Picker)**: Added explicit `<label htmlFor="leaselens-mobile-file-input">` HTML element binding ensuring reliable first-tap native file picker opening on Android and iOS mobile devices.
+  - **Bugfix 2 (Laptop First-Upload Flow)**: Fixed async `extractText(targetFile)` execution to await `runAiAnalysis` with the fresh PDF payload, eliminating state race conditions on the first upload.
   - Verified production build (`npm run build`) compiles 100% cleanly with zero errors.
 
 ---
@@ -51,7 +52,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 - **Styling**: Tailwind CSS v4 + Château Shadows palette
 - **PDF Viewer**: Embedded PDF Viewer Component with URL fragment page targeting (`#page=X`)
 - **AI Model**: Gemini 2.5 Flash via `@google/genai`
-- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL)
+- **PDF Extraction**: `pdfjs-dist` (legacy engine with Base64 worker Data URL + W3C DOMMatrix polyfill)
 - **Icons**: `lucide-react`
 
 ### Key Files
@@ -60,7 +61,7 @@ An AI-powered residential lease document analyzer. Users upload a lease PDF, and
 - `src/app/components/TotalCostCalculator.tsx` — Total Lease Cost & Financial Commitment Calculator with interactive toggles and multi-currency formatting.
 - `src/app/components/PDFViewer.tsx` — PDF Document Viewer component with page controls and target fragment jumping.
 - `src/app/components/AskMyLease.tsx` — Grounded AI Q&A chat assistant component with suggested question chips and auto-reset.
-- `src/app/api/extract-pdf/route.ts` — Server route for page-aware PDF text parsing (`--- PAGE X ---`).
+- `src/app/api/extract-pdf/route.ts` — Server route for page-aware PDF text parsing (`--- PAGE X ---`) with W3C DOMMatrix polyfill for Netlify.
 - `src/app/api/analyze-lease/route.ts` — Server route for Gemini 2.5 Flash AI analysis, factual extraction priority, risk classification, multi-currency parsing, and server-side page verification.
 - `src/app/api/ask-lease/route.ts` — Server route for grounded Gemini 2.5 Flash Q&A with 3-tier grounding classification.
 - `README.md` — Complete project showcase and setup guide.
